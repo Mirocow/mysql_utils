@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # === CONFIG ===
 BCKDIR='/var/backups/mysql'
@@ -59,37 +59,41 @@ backup()
 
 	query="SHOW databases;"
 	local skip=(
-		'information_schema' 
-		'performance_schema' 
-		'mysql'
+		'information_schema'
+		'performance_schema'
 		)
 	array_skip=( ${skip[@]} ${DATABASES_SKIP[@]} )
 	skip_reg=`array_join "${array_skip[@]}"`
 	f_log "Skip databases: $skip_reg"
-	
-	for BDD in `mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | egrep -v "$skip_reg"`; do
 
-			f_log "* Processing BDD $BDD"
+	for BDD in $(mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | egrep -v "$skip_reg"); do
 
 			mkdir -p $DST/$BDD 2>/dev/null 1>&2
 			chown mysql:mysql $DST/$BDD
 
 			query="SHOW CREATE DATABASE \`$BDD\`;"
-			mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
-			f_log "  > Export create"
+			mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | \
+						awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
+			if [ -f $DST/$BDD/__create.sql ]; then
+				f_log "  > Export create"
+			fi
 
 			query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-			for viewName in `mysql --defaults-extra-file=$MYCNF $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'`
-			do
+			for viewName in $(mysql --defaults-extra-file=$MYCNF $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
 				mysqldump --defaults-file=$MYCNF $BDD $viewName >> $DST/$BDD/__views.sql
 			done
-			f_log "  > Exports views"
+			if [ -f $DST/$BDD/__views.sql ]; then
+				f_log "  > Exports views"
+			fi
 
-			mysqldump --defaults-file=$MYCNF --routines --no-create-info --no-data --no-create-db --skip-opt $BDD | sed -e  's/DEFINER=[^*]*\*/\*/'  > $DST/$BDD/__routines.sql
-			f_log "  > Exports Routines"
+			mysqldump --defaults-file=$MYCNF --routines --no-create-info --no-data --no-create-db --skip-opt $BDD | \
+								sed -e  's/DEFINER=[^*]*\*/\*/'  > $DST/$BDD/__routines.sql
+			if [ -f $DST/$BDD/__routines.sql ]; then
+				f_log "  > Exports Routines"
+			fi
 
 			query="SHOW TABLES;"
-			for TABLE in `mysql --defaults-extra-file=$MYCNF --skip-column-names -B $BDD -e "$query" | grep -v slow_log | grep -v general_log`; do
+			for TABLE in $(mysql --defaults-extra-file=$MYCNF --skip-column-names -B $BDD -e "$query" | grep -v slow_log | grep -v general_log); do
 					f_log "  ** Dump $BDD.$TABLE"
 
 					mysqldump --defaults-file=$MYCNF -T $DST/$BDD/ $BDD $TABLE
@@ -104,6 +108,9 @@ backup()
 
 					if [ -f "$DST/$BDD/$TABLE.txt" ]; then
 							f_log "  ** bzip2 $BDD/$TABLE.txt in background"
+							if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+								rm $DST/$BDD/$TABLE.txt.bz2
+							fi
 							bzip2 $DST/$BDD/$TABLE.txt &
 					else
 							f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
@@ -116,15 +123,15 @@ backup()
 	f_log "** END **"
 }
 
-while getopts ":e:r:" opt;
+while getopts ":e:r:s" opt;
 do
 	case ${opt} in
-		e) 
+		e)
 			exclude=${OPTARG}
 			IFS=, read -r -a DATABASES_SKIP <<< "$exclude"
 		;;
-		*) 
-			usage			
+		*)
+			usag
 			exit 1
 		;;
 	esac

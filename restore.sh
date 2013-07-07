@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # === CONFIG ===
 DIR_PWD=$(pwd)
@@ -7,9 +7,19 @@ MYCNF='/etc/mysql/debian.cnf'
 MYDATA='/var/lib/mysql'
 
 # === FUNCTIONS ===
+database_exists()
+{
+	RESULT=`mysqlshow --defaults-extra-file=$MYCNF $@| grep -v Wildcard | grep -o $@`
+	if [ "$RESULT" == "$@" ]; then
+			echo YES
+	else
+			echo NO
+	fi
+}
+
 f_log() 
 {
-	logger "$RESTORE: $@"
+	logger "RESTORE: $@"
 }
 
 usage()
@@ -21,6 +31,7 @@ This script restore databases.
 
 OPTIONS:
    -e      Exclude databases
+	 -s			 Selected databases
 	 -c			 Check innochecksum of table after import
 EOF
 }
@@ -44,14 +55,8 @@ restore()
 			exit 1
 	fi
 
-	f_log "Create databases"
-	for i in $(ls -1 $DIR_PWD/*/__create.sql); do
-			if [ -f "$i" ]; then			
-					mysql --defaults-extra-file=$MYCNF < $i 2>/dev/null
-			fi
-	done
-
-	for i in `ls -1 -d $DIR_PWD/*/`; do
+	for i in $(ls -1 -d $DIR_PWD/*); do
+	
 					BDD=$(basename $i)
 					
 					for skip in "${DATABASES_SKIP[@]}"; do
@@ -62,79 +67,107 @@ restore()
 						fi								
 					done
 					
-					f_log "Import tables into $BDD"
+					for select in "${DATABASES_SELECTED[@]}"; do
+						if [ $BDD != $select ]; then
+							f_log "Skip database $BDD"
+							unset BDD
+							break
+						fi								
+					done
+				
+					if [ $BDD ]; then
 					
-					if [ $BDD ]; then						
-						for TABLE in `ls -1 $i |  grep -v __ | awk -F. '{print $1}' | sort | uniq`; do
-						
-										f_log "Create table: $TABLE"
-										mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
-																		DROP TABLE IF EXISTS $TABLE;
-																		SOURCE $DIR_PWD/$BDD/$TABLE.sql;
-																		SET foreign_key_checks = 1;"					
-															
-										if [ -f "$DIR_PWD/$BDD/$TABLE.txt.bz2" ]; then
-												f_log "< $TABLE"
-												if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
-													rm $DIR_PWD/$BDD/$TABLE.txt
-												fi
-												bunzip2 $DIR_PWD/$BDD/$TABLE.txt.bz2
-										fi
-										
-										if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
-											f_log "+ $TABLE"
-											mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
-																			LOAD DATA INFILE '$DIR_PWD/$BDD/$TABLE.txt'
-																			INTO TABLE $TABLE;
-																			SET foreign_key_checks = 1;"
-																													
-											if [ ! -f "$DIR_PWD/$BDD/$TABLE.txt.bz2" ]; then
-												f_log "> $TABLE"
-												bzip2 $DIR_PWD/$BDD/$TABLE.txt
-											fi
-										fi
-										
-										if [ $check ]; then
-											# Check INNODB table
-											if [ -f "$MYDATA/$BDD/$TABLE.ibd" ]; then
-												if [ ! `innochecksum $MYDATA/$BDD/$TABLE.ibd` ]; then
-													f_log "$TABLE [OK]"
-												else
-													f_log "$TABLE [ERR]"
-												fi
-											fi
-										fi
-										
-						done						
-						
-						f_log "Import routines into $BDD"
-						if [ -f "$DIR_PWD/$BDD/__routines.sql" ]; then
-								mysql --defaults-extra-file=$MYCNF $BDD < $DIR_PWD/$BDD/__routines.sql 2>/dev/null
+						if [ -f $DIR_PWD/$BDD/__create.sql ]; then
+							f_log "Create database $BDD"
+							mysql --defaults-extra-file=$MYCNF < $DIR_PWD/$BDD/__create.sql 2>/dev/null
 						fi
-
-						f_log "Import views into $BDD"
-						if [ -f "$DIR_PWD/$BDD/__views.sql" ]; then
-								mysql --defaults-extra-file=$MYCNF $BDD < $DIR_PWD/$BDD/__views.sql 2>/dev/null
-						fi					
 						
+						if [ $(database_exists $BDD) != "YES" ]; then
+							f_log "Error: Database $BDD dose not exists";
+						else
+						
+							tables=$(ls -1 $i |  grep -v __ | awk -F. '{print $1}' | sort | uniq)
+						
+							f_log "Create tables in $BDD"
+							for TABLE in $tables; do							
+											f_log "Create table: $BDD/$TABLE"
+											mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
+																			DROP TABLE IF EXISTS $TABLE;
+																			SOURCE $DIR_PWD/$BDD/$TABLE.sql;
+																			SET foreign_key_checks = 1;"
+							done
+							
+							f_log "Import data into $BDD"		
+							for TABLE in $tables; do									
+											f_log "Import data into $BDD/$TABLE"
+												
+											if [ -f "$DIR_PWD/$BDD/$TABLE.txt.bz2" ]; then
+													f_log "< $TABLE"
+													if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
+														rm $DIR_PWD/$BDD/$TABLE.txt
+													fi
+													bunzip2 $DIR_PWD/$BDD/$TABLE.txt.bz2
+											fi
+											
+											if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
+												f_log "+ $TABLE"
+												mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
+																				LOAD DATA INFILE '$DIR_PWD/$BDD/$TABLE.txt'
+																				INTO TABLE $TABLE;
+																				SET foreign_key_checks = 1;"
+																														
+												if [ ! -f "$DIR_PWD/$BDD/$TABLE.txt.bz2" ]; then
+													f_log "> $TABLE"
+													bzip2 $DIR_PWD/$BDD/$TABLE.txt
+												fi
+											fi
+											
+											if [ $DATABASES_TABLE_CHECK ]; then
+												# Check INNODB table
+												if [ -f "$MYDATA/$BDD/$TABLE.ibd" ]; then
+													if [ ! $(innochecksum $MYDATA/$BDD/$TABLE.ibd) ]; then
+														f_log "$TABLE [OK]"
+													else
+														f_log "$TABLE [ERR]"
+													fi
+												fi
+											fi	
+							done						
+							
+							if [ -f "$DIR_PWD/$BDD/__routines.sql" ]; then
+									f_log "Import routines into $BDD"
+									mysql --defaults-extra-file=$MYCNF $BDD < $DIR_PWD/$BDD/__routines.sql 2>/dev/null
+							fi
+							
+							if [ -f "$DIR_PWD/$BDD/__views.sql" ]; then
+									f_log "Import views into $BDD"
+									mysql --defaults-extra-file=$MYCNF $BDD < $DIR_PWD/$BDD/__views.sql 2>/dev/null
+							fi
+							
+						fi
 					fi				
 	done
 
+	f_log "Flush privileges;"
 	mysql --defaults-extra-file=$MYCNF -e "flush privileges;"
 
 	f_log "** END **"
 }
 
 # === EXECUTE ===
-while getopts ":e:c:" opt;
+while getopts ":e:c:s:" opt;
 do
 	case ${opt} in
 		e) 
 			exclude=${OPTARG}
 			IFS=, read -r -a DATABASES_SKIP <<< "$exclude"
 		;;
+		s)
+			selected=${OPTARG}
+			IFS=, read -r -a DATABASES_SELECTED <<< "$selected"		
+		;;
 		c)
-			check=1
+			DATABASES_TABLE_CHECK=1
 		;;
 		*) 
 			usage			
@@ -142,8 +175,7 @@ do
 		;;
 	esac
 done
-
-shift "$((OPTIND - 1))"
+#shift "$((OPTIND - 1))"
 
 # === AUTORUN ===
 restore
