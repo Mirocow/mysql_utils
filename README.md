@@ -1,4 +1,3 @@
-
 mysql_utils for Debian
 =======================
 
@@ -36,3 +35,8 @@ nano /etc/cron.d/db_backup
 
     @daily      root . /etc/default/db_backup && if [ "$START" = "yes" ] && [ -x /var/www/mysql_utils/backup.sh ]; \
     then /bin/bash /var/www/mysql_utils/backup.sh; fi
+
+Check work
+==========
+
+    tail -f /var/log/syslog
