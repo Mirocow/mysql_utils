@@ -10,7 +10,7 @@ Install
     git clone https://github.com/Mirocow/mysql_utils.git
     cd mysql_utils
 
-Backup (All Databases)    
+Backup all databases   
 ======
 
     cd ~
