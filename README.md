@@ -17,10 +17,10 @@ Backup (All Databases)
     cd mysql_utils
     bash backup.sh
 
-Restore
+Restore for selected date
 =======
 
-    cd /var/backups/mysql
+    cd /var/backups/mysql/[some date]
     bash ~/mysql_utils/restore.sh
 
 Restore selected table
