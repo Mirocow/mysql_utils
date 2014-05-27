@@ -1,8 +1,12 @@
 #!/bin/sh
 
-# === CONFIG ===
+# === CONFIG DEBIAN ===
 BCKDIR='/var/backups/mysql'
 MYCNF='/etc/mysql/debian.cnf'
+
+# === CONFIG OTHER SERVERS ===
+#BCKDIR='./backups'
+#MYCNF='./etc/mysql/debian.cnf'
 
 BIN_DEPS='bzip2 mysql mysqldump'
 DATE=$(date '+%Y.%m.%d')
