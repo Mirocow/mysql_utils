@@ -1,5 +1,5 @@
-mysql_utils for Debian
-=======================
+mysql_utils for Debian or Other servers
+=======================================
 
 Backup and Restore data from MySql tables
 
@@ -56,3 +56,9 @@ Check work
         May 23 12:25:43 db1 logger: BACKUP:   ** bzip2 tecdoc.2013/ARTICLES
         May 23 12:25:43 db1 logger: BACKUP:   ** Dump tecdoc.2013.ARTICLE_C
         
+Tested on
+==========
+
+    Debiad
+    FreeBsd
+    Ubuntu
