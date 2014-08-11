@@ -36,10 +36,16 @@ nano /etc/default/db_backup
 
     START=yes
 
-nano /etc/cron.d/db_backup
+nano /etc/cron.daily/db_backup
 
-    @daily      root . /etc/default/db_backup && if [ "$START" = "yes" ] && [ -x /root/mysql_utils/backup.sh ]; \
-    then /bin/bash /root/mysql_utils/backup.sh; fi
+    #!/bin/sh
+
+    . /etc/default/db_backup
+    
+    if [ "$START" = "yes" ]; then
+    	logger "Start databases backup system..."
+    	/bin/bash /root/scripts/mysql_utils/backup.sh -e tecdoc.2013
+    fi
 
 Check work
 ==========
