@@ -1,4 +1,4 @@
-mysql_utils for Debian or Other servers
+mysql_utils for Debian or Other OS
 =======================================
 
 Backup and Restore data from MySql tables
