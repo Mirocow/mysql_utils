@@ -44,7 +44,7 @@ nano /etc/cron.daily/db_backup
     
     if [ "$START" = "yes" ]; then
     	logger "Start databases backup system..."
-    	/bin/bash /root/scripts/mysql_utils/backup.sh -e tecdoc.2013
+    	/bin/bash /root/scripts/mysql_utils/backup.sh -e some_exclude_database
     fi
 
 Check work
