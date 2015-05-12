@@ -23,11 +23,11 @@ Restore for selected date
     cd /var/backups/mysql/[some date]
     bash ~/mysql_utils/restore.sh
 
-Restore selected table
+Restore selected DB
 =======
 
     cd /var/backups/mysql/[some date]/[some db name]
-    bash ~/mysql_utils/restore_table.sh
+    bash ~/mysql_utils/restore_db.sh
 
 Automation backup with Cron
 ===========================
