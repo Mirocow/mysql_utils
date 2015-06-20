@@ -135,7 +135,7 @@ do
 			IFS=, read -r -a DATABASES_SKIP <<< "$exclude"
 		;;
 		*)
-			usag
+			usage
 			exit 1
 		;;
 	esac
