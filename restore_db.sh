@@ -53,7 +53,7 @@ restore()
 
             if [ -f "$PATH/$TABLE.txt" ]; then
               f_log "+ $TABLE"
-              /usr/bin/mysql --local-infile --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
+              /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0;
                               LOAD DATA LOCAL INFILE '$PATH/$TABLE.txt'
                               INTO TABLE $TABLE;
                               SET foreign_key_checks = 1;"
