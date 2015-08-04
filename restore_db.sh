@@ -30,7 +30,7 @@ restore()
 
     tables=$(/bin/ls -1 $PATH |  /bin/grep -v __ | /usr/bin/awk -F. '{print $1}' | /usr/bin/sort | /usr/bin/uniq)
 
-    log "Create tables in $BDD"
+    f_log "Create tables in $BDD"
     for TABLE in $tables; do
             f_log "Create table: $BDD/$TABLE"
             /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
