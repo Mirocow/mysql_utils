@@ -111,8 +111,8 @@ restore()
 											
 											if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
 												f_log "+ $TABLE"
-												mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
-																				LOAD DATA INFILE '$DIR_PWD/$BDD/$TABLE.txt'
+												mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0;
+																				LOAD DATA LOCAL INFILE '$DIR_PWD/$BDD/$TABLE.txt'
 																				INTO TABLE $TABLE;
 																				SET foreign_key_checks = 1;"
 																														
