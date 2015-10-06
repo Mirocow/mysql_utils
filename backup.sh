@@ -8,7 +8,7 @@ MYCNF='/etc/mysql/debian.cnf'
 #BCKDIR='./backups'
 #MYCNF='./etc/mysql/debian.cnf'
 
-BIN_DEPS='bzip2 mysql mysqldump'
+BIN_DEPS="mysql mysqldump $COMPRESS"
 DATE=$(date '+%Y.%m.%d')
 DATEOLD=$(date --date='1 week ago' +%Y.%m.%d)
 DST=$BCKDIR/$DATE
@@ -30,6 +30,10 @@ if [ -d "$DSTOLD" ]; then rm -fr  $DSTOLD; fi
 # === FUNCTION ===
 f_log() {
     logger "BACKUP: $@"
+
+		if [ $VERBOSE -ne 0 ]; then
+			echo "BACKUP: $@"
+		fi
 }
 
 usage()
@@ -111,11 +115,15 @@ backup()
 					fi
 
 					if [ -f "$DST/$BDD/$TABLE.txt" ]; then
-							f_log "  ** bzip2 $BDD/$TABLE.txt in background"
+							f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
+
 							if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
 								rm $DST/$BDD/$TABLE.txt.bz2
 							fi
-							bzip2 $DST/$BDD/$TABLE.txt &
+
+							#bzip2 $DST/$BDD/$TABLE.txt &
+
+							$COMPRESS $DST/$BDD/$TABLE.txt &
 					else
 							f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
 					fi
@@ -127,20 +135,32 @@ backup()
 	f_log "** END **"
 }
 
-while getopts ":e:r:s" opt;
-do
-	case ${opt} in
-		e)
-			exclude=${OPTARG}
-			IFS=, read -r -a DATABASES_SKIP <<< "$exclude"
-		;;
-		*)
-			usage
-			exit 1
-		;;
-	esac
+OPTS=`getopt -o Vce: --long verbose,compress,exclude: -n 'parse-options' -- "$@"`
+
+if [ $? != 0 ] ; then echo "Failed parsing options." >&2 ; exit 1 ; fi
+
+echo "$OPTS"
+eval set -- "$OPTS"
+
+VERBOSE=0
+COMPRESS='bzip2'
+DATABASES_SKIP=''
+
+while true; do
+  case "$1" in
+    -V | --verbose ) VERBOSE=1; shift ;;
+    -c | --compress ) COMPRESS="$2"; shift ;;
+    -e | --exclude ) DATABASES_SKIP="$2"; shift ;;
+    -- ) shift; break ;;
+    * ) break ;;
+  esac
 done
-#shift "$((OPTIND - 1))"
+
+# === SETTINGS ===
+
+echo "Verbose: $VERBOSE\n"
+echo "Compress: $COMPRESS\n"
+echo "Exclude: $DATABASES_SKIP\n"
 
 # === AUTORUN ===
 backup
