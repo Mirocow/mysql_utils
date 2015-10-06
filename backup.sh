@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # === CONFIG DEBIAN ===
 BCKDIR='/var/backups/mysql'
@@ -32,7 +32,7 @@ f_log() {
     logger "BACKUP: $@"
 
     if [ $VERBOSE -ne 0 ]; then
-	echo "BACKUP: $@"
+      echo "BACKUP: $@"
     fi
 }
 
@@ -66,10 +66,12 @@ backup()
 	f_log "** START **"
 
 	query="SHOW databases;"
+
 	local skip=(
 		'information_schema'
 		'performance_schema'
 		)
+
 	array_skip=( ${skip[@]} ${DATABASES_SKIP[@]} )
 	skip_reg=`array_join "${array_skip[@]}"`
 	f_log "Skip databases: $skip_reg"
@@ -135,26 +137,43 @@ backup()
 	f_log "** END **"
 }
 
-OPTS=`getopt -o Vce: --long verbose,compress,exclude: -n 'parse-options' -- "$@"`
-
-if [ $? != 0 ] ; then echo "Failed parsing options." >&2 ; exit 1 ; fi
-
-echo "$OPTS"
-eval set -- "$OPTS"
-
 VERBOSE=0
 COMPRESS='bzip2'
 DATABASES_SKIP=''
+PARAMS=()
 
-while true; do
-  case "$1" in
-    -V | --verbose ) VERBOSE=1; shift ;;
-    -c | --compress ) COMPRESS="$2"; shift ;;
-    -e | --exclude ) DATABASES_SKIP="$2"; shift; shift ;;
-    -- ) shift; break ;;
-    * ) break ;;
-  esac
+getopt --test > /dev/null
+if [[ $? != 4 ]]; then
+    echo "I’m sorry, `getopt --test` failed in this environment."
+    exit 2
+fi
+
+for i in "$@"
+do
+case $i in
+    -e=*|--exclude=*)
+    		DATABASES_SKIP=("${i#*=}")
+    		shift # past argument=value
+    ;;
+    -c=*|--compress=*)
+    		COMPRESS=("${i#*=}")
+    		shift # past argument=value
+    ;;
+    -v|--verbose)
+    		VERBOSE=1
+    		shift # past argument=value
+    ;;
+    *)
+        # unknown option
+        PARAMS+=($i)
+    ;;
+esac
 done
+
+#if [[ $# != 1 ]]; then
+#    usage
+#    exit 5
+#fi
 
 # === SETTINGS ===
 echo "Verbose: $VERBOSE\n"
