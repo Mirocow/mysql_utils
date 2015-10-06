@@ -31,7 +31,7 @@ if [ -d "$DSTOLD" ]; then rm -fr  $DSTOLD; fi
 f_log() {
     logger "BACKUP: $@"
 
-    if [ $VERBOSE -ne 0 ]; then
+    if [ $VERBOSE -eq 1 ]; then
       echo "BACKUP: $@"
     fi
 }
@@ -117,15 +117,24 @@ backup()
 					fi
 
 					if [ -f "$DST/$BDD/$TABLE.txt" ]; then
-							f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
 
-							if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-								rm $DST/$BDD/$TABLE.txt.bz2
+
+							if [ $COMPRESS ]; then
+
+              	f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
+
+              	if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+                	rm $DST/$BDD/$TABLE.txt.bz2
+              	fi
+
+                if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+                  rm $DST/$BDD/$TABLE.txt.gz
+                fi
+
+								$COMPRESS $DST/$BDD/$TABLE.txt &
+
 							fi
 
-							#bzip2 $DST/$BDD/$TABLE.txt &
-
-							$COMPRESS $DST/$BDD/$TABLE.txt &
 					else
 							f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
 					fi
