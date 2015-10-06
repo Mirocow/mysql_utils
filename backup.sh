@@ -31,9 +31,9 @@ if [ -d "$DSTOLD" ]; then rm -fr  $DSTOLD; fi
 f_log() {
     logger "BACKUP: $@"
 
-		if [ $VERBOSE -ne 0 ]; then
-			echo "BACKUP: $@"
-		fi
+    if [ $VERBOSE -ne 0 ]; then
+	echo "BACKUP: $@"
+    fi
 }
 
 usage()
