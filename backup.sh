@@ -157,7 +157,6 @@ while true; do
 done
 
 # === SETTINGS ===
-
 echo "Verbose: $VERBOSE\n"
 echo "Compress: $COMPRESS\n"
 echo "Exclude: $DATABASES_SKIP\n"
