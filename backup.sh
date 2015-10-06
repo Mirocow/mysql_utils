@@ -51,10 +51,10 @@ Options:
    -v  | --verbose				Add verbose into output
 
 Example:
-	backup.sh --verbose -compress=
-	backup.sh --verbose -compress=zgip
-	backup.sh --verbose -compress=bzip2
-	backup.sh --verbose -compress= --exclude="mysql"
+	backup.sh --verbose --compress=
+	backup.sh --verbose --compress=zgip
+	backup.sh --verbose --compress=bzip2
+	backup.sh --verbose --compress= --exclude="mysql"
 EOF
 }
 
