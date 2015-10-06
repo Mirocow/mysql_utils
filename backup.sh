@@ -150,7 +150,7 @@ while true; do
   case "$1" in
     -V | --verbose ) VERBOSE=1; shift ;;
     -c | --compress ) COMPRESS="$2"; shift ;;
-    -e | --exclude ) DATABASES_SKIP="$2"; shift ;;
+    -e | --exclude ) DATABASES_SKIP="$2"; shift; shift ;;
     -- ) shift; break ;;
     * ) break ;;
   esac
