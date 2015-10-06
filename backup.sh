@@ -43,8 +43,18 @@ usage: $0 options
 
 This script buckup all databases.
 
-OPTIONS:
-   -e      Exclude databases
+Usage: backup.sh <[options]>
+
+Options:
+   -e= | --exclude=				Exclude databases
+   -c= | --compress=			Compress with gzip or bzip2
+   -v  | --verbose				Add verbose into output
+
+Example:
+	backup.sh --verbose -compress=
+	backup.sh --verbose -compress=zgip
+	backup.sh --verbose -compress=bzip2
+	backup.sh --verbose -compress= --exclude="mysql"
 EOF
 }
 
@@ -146,6 +156,8 @@ backup()
 	f_log "** END **"
 }
 
+if [ $# = 0 ]; then usage; exit; fi
+
 VERBOSE=0
 COMPRESS='bzip2'
 DATABASES_SKIP=''
@@ -175,16 +187,13 @@ case $i in
     *)
         # unknown option
         PARAMS+=($i)
+				#usage
     ;;
 esac
 done
 
-#if [[ $# != 1 ]]; then
-#    usage
-#    exit 5
-#fi
-
 # === SETTINGS ===
+echo "Params: $PARAMS\n"
 echo "Verbose: $VERBOSE\n"
 echo "Compress: $COMPRESS\n"
 echo "Exclude: $DATABASES_SKIP\n"
