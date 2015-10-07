@@ -22,8 +22,8 @@ Options:
    -c= | --compress=                    Compress with gzip or bzip2
    -v  | --verbose                      Add verbose into output
    -l  | --lifetime=                    Lifetime for dump files
-   --config                             Config file of Debian format
-   --dir                                Backup directory
+   --config=                            Config file of Debian format
+   --dir=                               Backup directory
    -h  | --help                         This text
 
 Example:
