@@ -13,10 +13,10 @@ f_log()
 usage()
 {
     cat << EOF
-
-    This mysql backup engine.
-
-    Usage:  $0 <[options]>
+    
+        This mysql backup engine.
+    
+        Usage:  $0 <[options]>
 
 Options:
    -e= | --exclude=                     Exclude databases
@@ -59,8 +59,8 @@ backup()
     query="SHOW databases;"
 
     local default_databases_exclude=(
-        'information_schema'
-        'performance_schema'
+    'information_schema'
+    'performance_schema'
     )
 
     local array_views=()
@@ -95,8 +95,8 @@ backup()
         fi
 
         local default_tables_exclude=(
-            'slow_log'
-            'general_log'
+        'slow_log'
+        'general_log'
         )
 
         tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
@@ -104,7 +104,7 @@ backup()
         f_log "Exclude tables: $tables_exclude_expression"
 
         query="SHOW TABLES;"
-        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$views_exclude_expression" | egrep -v "$tables_exclude_expression"); do
+        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
             mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE
