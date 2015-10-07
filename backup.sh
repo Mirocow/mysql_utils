@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # === FUNCTION ===
-f_log() {
+f_log()
+{
     logger "BACKUP: $@"
 
     if [ $VERBOSE -eq 1 ]; then
@@ -13,9 +14,9 @@ usage()
 {
     cat << EOF
 
-This mysql backup engine.
+    This mysql backup engine.
 
-Usage:  $0 <[options]>
+    Usage:  $0 <[options]>
 
 Options:
    -e= | --exclude=                     Exclude databases
@@ -66,7 +67,7 @@ backup()
 
     database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
-    f_log "Skip databases: $database_exclude_expression"
+    f_log "Exclude databases: $database_exclude_expression"
 
     for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 
@@ -98,12 +99,12 @@ backup()
             'general_log'
         )
 
-        tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} )
-        views_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
-        f_log "  - Exclude views: $views_exclude_expression"
+        tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
+        tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
+        f_log "Exclude tables: $tables_exclude_expression"
 
         query="SHOW TABLES;"
-        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$views_exclude_expression"); do
+        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$views_exclude_expression" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
             mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE
@@ -153,6 +154,7 @@ fi
 VERBOSE=0
 COMPRESS='bzip2'
 EXCLUDE_DATABASES=''
+EXCLUDE_TABLES=''
 TIME_REMOVED_DUMP_FILES='1 week ago'
 BACKUP_DIR='/var/backups/mysql'
 CONFIG_FILE='/etc/mysql/debian.cnf'
@@ -172,6 +174,10 @@ do
     case $i in
         -e=* | --exclude=*)
             EXCLUDE_DATABASES=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        --exclude-tables=*)
+            EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
         ;;
         -c=* | --compress=*)
@@ -223,7 +229,8 @@ f_log "Dump into: $BACKUP_DIR"
 f_log "Config file: $CONFIG_FILE"
 f_log "Verbose: $VERBOSE"
 f_log "Compress: $COMPRESS"
-f_log "Exclude: $DATABASES_SKIP"
+f_log "Exclude dtabases: $DATABASES_SKIP"
+f_log "Exclude tables: $EXCLUDE_TABLES"
 f_log "Life time: $TIME_REMOVED_DUMP_FILES"
 f_log "============================================"
 f_log ""
