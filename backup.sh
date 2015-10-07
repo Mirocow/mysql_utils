@@ -167,14 +167,6 @@ for BIN in $BIN_DEPS; do
     fi
 done
 
-if [ ! -d "$DST" ]; then
-    mkdir -p $DST;
-fi
-
-if [ -d "$DSTOLD" ]; then
-    rm -fr $DSTOLD;
-fi
-
 for i in "$@"
 do
     case $i in
@@ -216,6 +208,14 @@ DATE=$(date '+%Y.%m.%d')
 DATEOLD="date --date=$TIME_REMOVED_DUMP_FILES +%Y.%m.%d"
 DST=$BACKUP_DIR/$DATE
 DSTOLD=$BACKUP_DIR/$($DATEOLD)
+
+if [ ! -d "$DST" ]; then
+    mkdir -p $DST;
+fi
+
+if [ -d "$DSTOLD" ]; then
+    rm -fr $DSTOLD;
+fi
 
 # === SETTINGS ===
 f_log "============================================"
