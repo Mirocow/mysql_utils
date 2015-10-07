@@ -204,8 +204,8 @@ do
     esac
 done
 
-DATE=$(date '+%Y.%m.%d')
-DATEOLD=date --date="$TIME_REMOVED_DUMP_FILES" +%Y.%m.%d
+DATE=`date '+%Y.%m.%d'`
+DATEOLD=`date --date="$TIME_REMOVED_DUMP_FILES" +%Y.%m.%d`
 DST=$BACKUP_DIR/$DATE
 DSTOLD=$BACKUP_DIR/$($DATEOLD)
 
