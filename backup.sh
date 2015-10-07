@@ -20,6 +20,7 @@ usage()
 
 Options:
    -e= | --exclude=                     Exclude databases
+   --exclude-tables=                    Exclude tables
    -c= | --compress=                    Compress with gzip or bzip2
    -v  | --verbose                      Add verbose into output
    -l  | --lifetime=                    Lifetime for dump files
@@ -36,6 +37,7 @@ Example:
         backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
 EOF
 }
 
