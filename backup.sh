@@ -28,7 +28,7 @@ Options:
    --dir=                               Backup directory
    -h  | --help                         This text
 
-Example:
+Examples:
         backup.sh --verbose --compress=
         backup.sh --verbose --compress=zgip
         backup.sh --verbose --compress=bzip2
