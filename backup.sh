@@ -1,203 +1,232 @@
 #!/bin/bash
 
-# === CONFIG DEBIAN ===
-BCKDIR='/var/backups/mysql'
-MYCNF='/etc/mysql/debian.cnf'
-
-# === CONFIG OTHER SERVERS ===
-#BCKDIR='./backups'
-#MYCNF='./etc/mysql/debian.cnf'
-
-BIN_DEPS="mysql mysqldump $COMPRESS"
-DATE=$(date '+%Y.%m.%d')
-DATEOLD=$(date --date='1 week ago' +%Y.%m.%d)
-DST=$BCKDIR/$DATE
-DSTOLD=$BCKDIR/$DATEOLD
-
-# === CHECKS ===
-for BIN in $BIN_DEPS; do
-    which $BIN 1>/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo "Error: Required file could not be found: $BIN"
-        exit 1
-    fi
-done
-
-
-if [ ! -d "$DST" ];  then mkdir -p $DST;   fi
-if [ -d "$DSTOLD" ]; then rm -fr  $DSTOLD; fi
-
 # === FUNCTION ===
 f_log() {
     logger "BACKUP: $@"
 
     if [ $VERBOSE -eq 1 ]; then
-      echo "BACKUP: $@"
+        echo "BACKUP: $@"
     fi
 }
 
 usage()
 {
-cat << EOF
-usage: $0 options
+    cat << EOF
 
-This script buckup all databases.
+This mysql backup engine.
 
-Usage: backup.sh <[options]>
+Usage:  $0 <[options]>
 
 Options:
-   -e= | --exclude=				Exclude databases
-   -c= | --compress=			Compress with gzip or bzip2
-   -v  | --verbose				Add verbose into output
+   -e= | --exclude=                     Exclude databases
+   -c= | --compress=                    Compress with gzip or bzip2
+   -v  | --verbose                      Add verbose into output
+   -l  | --lifetime=                    Lifetime for dump files
+   --config                             Config file of Debian format
+   --dir                                Backup directory
+   -h  | --help                         This text
 
 Example:
-	backup.sh --verbose --compress=
-	backup.sh --verbose --compress=zgip
-	backup.sh --verbose --compress=bzip2
-	backup.sh --verbose --compress= --exclude="mysql"
+        backup.sh --verbose --compress=
+        backup.sh --verbose --compress=zgip
+        backup.sh --verbose --compress=bzip2
+        backup.sh --verbose --compress= --exclude="mysql"
+        backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
+        backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
 EOF
 }
 
-array_join()
+prepaire_skip_expression()
 {
-	local array_skip=("${@}")	
-	for skip in "${array_skip[@]}"; do
-		if [ -x $return ]; then
-			local return="^$skip\$"
-		else
-			return="$return|^$skip\$"
-		fi
-	done
-	echo ${return}
+    local array_skip=("${@}")
+    for skip in "${array_skip[@]}"; do
+        if [ -x $return ]; then
+            local return="^$skip\$"
+        else
+            return="$return|^$skip\$"
+        fi
+    done
+    echo ${return}
 }
 
 backup()
 {
-	f_log "** START **"
+    f_log " START "
 
-	query="SHOW databases;"
+    query="SHOW databases;"
 
-	local skip=(
-		'information_schema'
-		'performance_schema'
-		)
+    local default_databases_exclude=(
+        'information_schema'
+        'performance_schema'
+    )
 
-	array_skip=( ${skip[@]} ${DATABASES_SKIP[@]} )
-	skip_reg=`array_join "${array_skip[@]}"`
-	f_log "Skip databases: $skip_reg"
+    local array_views=()
 
-	for BDD in $(mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | egrep -v "$skip_reg"); do
+    database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
+    database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
+    f_log "Skip databases: $database_exclude_expression"
 
-			mkdir -p $DST/$BDD 2>/dev/null 1>&2
-			chown mysql:mysql $DST/$BDD
+    for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 
-			query="SHOW CREATE DATABASE \`$BDD\`;"
-			mysql --defaults-extra-file=$MYCNF --skip-column-names -B -e "$query" | \
-						awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
-			if [ -f $DST/$BDD/__create.sql ]; then
-				f_log "  > Export create"
-			fi
+        mkdir -p $DST/$BDD 2>/dev/null 1>&2
+        chown mysql:mysql $DST/$BDD
 
-			query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-			for viewName in $(mysql --defaults-extra-file=$MYCNF $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-				mysqldump --defaults-file=$MYCNF $BDD $viewName >> $DST/$BDD/__views.sql
-			done
-			if [ -f $DST/$BDD/__views.sql ]; then
-				f_log "  > Exports views"
-			fi
+        query="SHOW CREATE DATABASE \`$BDD\`;"
+        mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
+        if [ -f $DST/$BDD/__create.sql ]; then
+            f_log "  > Export create"
+        fi
 
-			mysqldump --defaults-file=$MYCNF --routines --no-create-info --no-data --no-create-db --skip-opt $BDD | \
-								sed -e  's/DEFINER=[^*]*\*/\*/'  > $DST/$BDD/__routines.sql
-			if [ -f $DST/$BDD/__routines.sql ]; then
-				f_log "  > Exports Routines"
-			fi
+        query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
+        for viewName in $(mysql --defaults-extra-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
+            mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $DST/$BDD/__views.sql
+            array_views+=($viewName)
+        done
+        if [ -f $DST/$BDD/__views.sql ]; then
+            f_log "  > Exports views"
+        fi
 
-			query="SHOW TABLES;"
-			for TABLE in $(mysql --defaults-extra-file=$MYCNF --skip-column-names -B $BDD -e "$query" | grep -v slow_log | grep -v general_log); do
-					f_log "  ** Dump $BDD.$TABLE"
+        mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $BDD | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
+        if [ -f $DST/$BDD/__routines.sql ]; then
+            f_log "  > Exports Routines"
+        fi
 
-					mysqldump --defaults-file=$MYCNF -T $DST/$BDD/ $BDD $TABLE
+        local default_tables_exclude=(
+            'slow_log'
+            'general_log'
+        )
 
-					if [ -f "$DST/$BDD/$TABLE.sql" ]; then
-							chmod 750 $DST/$BDD/$TABLE.sql
-							chown root:root $DST/$BDD/$TABLE.sql
-							f_log "  ** set perm on $BDD/$TABLE.sql"
-					else
-							f_log "  ** WARNING : $DST/$BDD/$TABLE.sql not found"
-					fi
+        tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} )
+        views_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
+        f_log "  - Exclude views: $views_exclude_expression"
 
-					if [ -f "$DST/$BDD/$TABLE.txt" ]; then
+        query="SHOW TABLES;"
+        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$views_exclude_expression"); do
+            f_log "  ** Dump $BDD.$TABLE"
 
+            mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE
 
-							if [ $COMPRESS ]; then
+            if [ -f "$DST/$BDD/$TABLE.sql" ]; then
+                chmod 750 $DST/$BDD/$TABLE.sql
+                chown root:root $DST/$BDD/$TABLE.sql
+                f_log "  ** set perm on $BDD/$TABLE.sql"
+            else
+                f_log "  ** WARNING : $DST/$BDD/$TABLE.sql not found"
+            fi
 
-              	f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
+            if [ -f "$DST/$BDD/$TABLE.txt" ]; then
 
-              	if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-                	rm $DST/$BDD/$TABLE.txt.bz2
-              	fi
+                if [ $COMPRESS ]; then
 
-                if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-                  rm $DST/$BDD/$TABLE.txt.gz
+                    f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
+
+                    if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+                        rm $DST/$BDD/$TABLE.txt.bz2
+                    fi
+
+                    if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+                        rm $DST/$BDD/$TABLE.txt.gz
+                    fi
+
+                    $COMPRESS $DST/$BDD/$TABLE.txt &
+
                 fi
 
-								$COMPRESS $DST/$BDD/$TABLE.txt &
+            else
+                f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
+            fi
 
-							fi
+        done
 
-					else
-							f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
-					fi
+    done
 
-			done
-
-	done
-
-	f_log "** END **"
+    f_log " END "
 }
 
-if [ $# = 0 ]; then usage; exit; fi
+if [ $# = 0 ]; then
+    usage;
+    exit;
+fi
 
 VERBOSE=0
 COMPRESS='bzip2'
-DATABASES_SKIP=''
-PARAMS=()
+EXCLUDE_DATABASES=''
+TIME_REMOVED_DUMP_FILES='1 week ago'
+BACKUP_DIR='/var/backups/mysql'
+CONFIG_FILE='/etc/mysql/debian.cnf'
+BIN_DEPS="mysql mysqldump $COMPRESS"
 
-getopt --test > /dev/null
-if [[ $? != 4 ]]; then
-    echo "I’m sorry, `getopt --test` failed in this environment."
-    exit 2
+# === CHECKS ===
+for BIN in $BIN_DEPS; do
+    which $BIN 1>/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Required commad file not be found: $BIN"
+        exit 1
+    fi
+done
+
+if [ ! -d "$DST" ]; then
+    mkdir -p $DST;
+fi
+
+if [ -d "$DSTOLD" ]; then
+    rm -fr $DSTOLD;
 fi
 
 for i in "$@"
 do
-case $i in
-    -e=*|--exclude=*)
-    		DATABASES_SKIP=("${i#*=}")
-    		shift # past argument=value
-    ;;
-    -c=*|--compress=*)
-    		COMPRESS=("${i#*=}")
-    		shift # past argument=value
-    ;;
-    -v|--verbose)
-    		VERBOSE=1
-    		shift # past argument=value
-    ;;
-    *)
+    case $i in
+        -e=* | --exclude=*)
+            EXCLUDE_DATABASES=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        -c=* | --compress=*)
+            COMPRESS=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        -l=* | --lifetime=*)
+            TIME_REMOVED_DUMP_FILES=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        --dir=*)
+            BACKUP_DIR=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        --config=*)
+            CONFIG_FILE=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        -v | --verbose)
+            VERBOSE=1
+            shift # past argument=value
+        ;;
+        -h | --help)
+            usage
+            exit
+        ;;
+        *)
         # unknown option
-        PARAMS+=($i)
-				#usage
-    ;;
-esac
+        ;;
+    esac
 done
 
+DATE=$(date '+%Y.%m.%d')
+DATEOLD="date --date=$TIME_REMOVED_DUMP_FILES +%Y.%m.%d"
+DST=$BACKUP_DIR/$DATE
+DSTOLD=$BACKUP_DIR/$($DATEOLD)
+
 # === SETTINGS ===
-echo "Params: $PARAMS\n"
-echo "Verbose: $VERBOSE\n"
-echo "Compress: $COMPRESS\n"
-echo "Exclude: $DATABASES_SKIP\n"
+f_log "============================================"
+f_log "Dump into: $BACKUP_DIR"
+f_log "Config file: $CONFIG_FILE"
+f_log "Verbose: $VERBOSE"
+f_log "Compress: $COMPRESS"
+f_log "Exclude: $DATABASES_SKIP"
+f_log "Life time: $TIME_REMOVED_DUMP_FILES"
+f_log "============================================"
+f_log ""
 
 # === AUTORUN ===
 backup
-
