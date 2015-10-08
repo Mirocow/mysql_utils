@@ -46,7 +46,7 @@ nano /etc/cron.daily/db_backup
     
     if [ "$START" = "yes" ]; then
     	logger "Start databases backup system..."
-    	/bin/bash /root/scripts/mysql_utils/backup.sh -e some_exclude_database
+    	/bin/bash /root/scripts/mysql_utils/backup.sh --e="some_exclude_database some_else_db"
     fi
 
 Check work
@@ -70,3 +70,36 @@ Tested on
     Debiad
     FreeBsd
     Ubuntu
+
+Help
+===========
+
+``` sh
+# bash backup.sh --help
+usage: backup.sh options
+
+This script buckup all databases.
+
+Usage: backup.sh <[options]>
+
+Options:
+   -e= | --exclude=                     Exclude databases
+   --exclude-tables=                    Exclude tables
+   -c= | --compress=                    Compress with gzip or bzip2
+   -v  | --verbose                      Add verbose into output
+   -l  | --lifetime=                    Lifetime for dump files
+   --config=                            Config file of Debian format
+   --dir=                               Backup directory
+   -h  | --help                         This text
+
+Examples:
+        backup.sh --verbose --compress=
+        backup.sh --verbose --compress=zgip
+        backup.sh --verbose --compress=bzip2
+        backup.sh --verbose --compress= --exclude="mysql"
+        backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
+        backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
+```
