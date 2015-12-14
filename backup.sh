@@ -133,7 +133,7 @@ backup()
 					
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2 && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2) &
 						
-                    else if [ $COMPRESS eq 'gzip' ]; then
+                    elif [ $COMPRESS eq 'gzip' ]; then
 					
 						if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
 							rm $DST/$BDD/$TABLE.txt.gz
