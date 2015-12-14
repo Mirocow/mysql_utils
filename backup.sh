@@ -4,7 +4,8 @@ VERBOSE=0
 COMPRESS='bzip2'
 USER='mysql'
 GROUP='mysql'
-FILEATTRIBUTES=750
+DIRECTORYATTRIBUTES=750
+FILEATTRIBUTES=640
 TIME_REMOVED_DUMP_FILES='1 week ago'
 BACKUP_DIR='/var/backups/mysql'
 CONFIG_FILE='/etc/mysql/debian.cnf'
@@ -89,6 +90,7 @@ backup()
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
+        chmod $DIRECTORYATTRIBUTES $DST/$BDD
 
         query="SHOW CREATE DATABASE \`$BDD\`;"
         mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
@@ -250,6 +252,7 @@ DSTOLD=$BACKUP_DIR/$DATEOLD
 
 if [ ! -d "$DST" ]; then
     mkdir -p $DST;
+    chmod $DIRECTORYATTRIBUTES $DST;
 fi
 
 if [ -d "$DSTOLD" ]; then
