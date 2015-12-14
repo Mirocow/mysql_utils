@@ -5,6 +5,9 @@ COMPRESS='bzip2'
 USER='mysql'
 GROUP='mysql'
 FILEATTRIBUTES=750
+TIME_REMOVED_DUMP_FILES='1 week ago'
+BACKUP_DIR='/var/backups/mysql'
+CONFIG_FILE='/etc/mysql/debian.cnf'
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -184,9 +187,6 @@ fi
 EXCLUDE_DATABASES=''
 EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
-TIME_REMOVED_DUMP_FILES='1 week ago'
-BACKUP_DIR='/var/backups/mysql'
-CONFIG_FILE='/etc/mysql/debian.cnf'
 BIN_DEPS="mysql mysqldump $COMPRESS"
 
 # === CHECKS ===
