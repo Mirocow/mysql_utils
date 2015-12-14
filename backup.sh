@@ -2,12 +2,6 @@
 
 VERBOSE=0
 COMPRESS='bzip2'
-EXCLUDE_DATABASES=''
-EXCLUDE_TABLES=''
-TIME_REMOVED_DUMP_FILES='1 week ago'
-BACKUP_DIR='/var/backups/mysql'
-CONFIG_FILE='/etc/mysql/debian.cnf'
-BIN_DEPS="mysql mysqldump $COMPRESS"
 USER='mysql'
 GROUP='mysql'
 FILEATTRIBUTES=750
@@ -35,6 +29,7 @@ usage()
 Options:
    -e= | --exclude=                     Exclude databases
    --exclude-tables=                    Exclude tables
+   --exclude-data-tables=               Exclude data tables
    -c= | --compress=                    Compress with gzip or bzip2
    -v  | --verbose                      Add verbose into output
    -l  | --lifetime=                    Lifetime for dump files
@@ -80,6 +75,8 @@ backup()
     )
 
     local array_views=()
+	
+	touch $DST/$BDD/error.log
 
     database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
@@ -98,14 +95,14 @@ backup()
 
         query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
         for viewName in $(mysql --defaults-extra-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-            mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $DST/$BDD/__views.sql
+            mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $DST/$BDD/__views.sql 2>> $DST/$BDD/error.log
             array_views+=($viewName)
-        done
+        done		
         if [ -f $DST/$BDD/__views.sql ]; then
             f_log "  > Exports views"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $BDD | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
+        mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
         if [ -f $DST/$BDD/__routines.sql ]; then
             f_log "  > Exports Routines"
         fi
@@ -117,13 +114,22 @@ backup()
 
         tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
         tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
-        f_log "Exclude tables: $tables_exclude_expression"
+        f_log "Exclude tables: $tables_exclude_expression"		
 
+        data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
+        data_tables_exclude_expression=`prepaire_skip_expression "${data_tables_exclude[@]}"`
+        f_log "Exclude data tables: $data_tables_exclude_expression"
+		
         query="SHOW TABLES;"
         for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
-            mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE
+			if [ echo $data_tables_exclude_expression| grep $TABLE ]; then
+				f_log "Exclude data from table $TABLE"
+				continue
+			fi
+			
+            mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
@@ -175,6 +181,14 @@ if [ $# = 0 ]; then
     exit;
 fi
 
+EXCLUDE_DATABASES=''
+EXCLUDE_TABLES=''
+EXCLUDE_DATA_TABLES=''
+TIME_REMOVED_DUMP_FILES='1 week ago'
+BACKUP_DIR='/var/backups/mysql'
+CONFIG_FILE='/etc/mysql/debian.cnf'
+BIN_DEPS="mysql mysqldump $COMPRESS"
+
 # === CHECKS ===
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1
@@ -195,6 +209,10 @@ do
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
         ;;
+        --exclude-data-tables=*)
+            EXCLUDE_DATA_TABLES=( "${i#*=}" )
+            shift # past argument=value
+        ;;		
         -c=* | --compress=*)
             COMPRESS=( "${i#*=}" )
             shift # past argument=value
