@@ -129,12 +129,12 @@ backup()
         for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
-			if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
-				f_log "Exclude data from table $TABLE"
-				mysqldump --defaults-file=$CONFIG_FILE --no-data -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-			else
-				mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-			fi            
+            if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
+                f_log "Exclude data from table $TABLE"
+                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+            else
+                mysqldump --defaults-file=$CONFIG_FILE --no-create-db --add-drop-table ---quick -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+            fi            
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
