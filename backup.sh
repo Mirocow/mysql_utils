@@ -1,5 +1,19 @@
 #!/bin/bash
 
+VERBOSE=0
+COMPRESS='bzip2'
+EXCLUDE_DATABASES=''
+EXCLUDE_TABLES=''
+TIME_REMOVED_DUMP_FILES='1 week ago'
+BACKUP_DIR='/var/backups/mysql'
+CONFIG_FILE='/etc/mysql/debian.cnf'
+BIN_DEPS="mysql mysqldump $COMPRESS"
+USER='mysql'
+GROUP='mysql'
+FILEATTRIBUTES=750
+
+# === DO NOT EDIT BELOW THIS LINE ===
+
 # === FUNCTION ===
 f_log()
 {
@@ -160,18 +174,6 @@ if [ $# = 0 ]; then
     usage;
     exit;
 fi
-
-VERBOSE=0
-COMPRESS='bzip2'
-EXCLUDE_DATABASES=''
-EXCLUDE_TABLES=''
-TIME_REMOVED_DUMP_FILES='1 week ago'
-BACKUP_DIR='/var/backups/mysql'
-CONFIG_FILE='/etc/mysql/debian.cnf'
-BIN_DEPS="mysql mysqldump $COMPRESS"
-USER='mysql'
-GROUP='mysql'
-FILEATTRIBUTES=750
 
 # === CHECKS ===
 for BIN in $BIN_DEPS; do
