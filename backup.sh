@@ -124,7 +124,7 @@ backup()
         for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
-			if [ echo $data_tables_exclude_expression| grep $TABLE ]; then
+			if [ `echo $data_tables_exclude_expression| grep $TABLE` ]; then
 				f_log "Exclude data from table $TABLE"
 				continue
 			fi
