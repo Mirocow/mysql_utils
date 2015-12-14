@@ -74,7 +74,7 @@ backup()
     for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
-        chown mysql:mysql $DST/$BDD
+        chown $USER:$GROUP $DST/$BDD
 
         query="SHOW CREATE DATABASE \`$BDD\`;"
         mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
@@ -112,8 +112,8 @@ backup()
             mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
-                chmod 750 $DST/$BDD/$TABLE.sql
-                chown root:root $DST/$BDD/$TABLE.sql
+                chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
+                chown $USER:$GROUP $DST/$BDD/$TABLE.sql
                 f_log "  ** set perm on $BDD/$TABLE.sql"
             else
                 f_log "  ** WARNING : $DST/$BDD/$TABLE.sql not found"
@@ -125,15 +125,23 @@ backup()
 
                     f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
 
-                    if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-                        rm $DST/$BDD/$TABLE.txt.bz2
+                    if [ $COMPRESS eq 'bzip2' ]; then
+					
+						if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+							rm $DST/$BDD/$TABLE.txt.bz2
+						fi					
+					
+                        ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2 && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2) &
+						
+                    else if [ $COMPRESS eq 'gzip' ]; then
+					
+						if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+							rm $DST/$BDD/$TABLE.txt.gz
+						fi					
+					
+                        ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz) &
+						
                     fi
-
-                    if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-                        rm $DST/$BDD/$TABLE.txt.gz
-                    fi
-
-                    $COMPRESS $DST/$BDD/$TABLE.txt &
 
                 fi
 
@@ -161,6 +169,9 @@ TIME_REMOVED_DUMP_FILES='1 week ago'
 BACKUP_DIR='/var/backups/mysql'
 CONFIG_FILE='/etc/mysql/debian.cnf'
 BIN_DEPS="mysql mysqldump $COMPRESS"
+USER='mysql'
+GROUP='mysql'
+FILEATTRIBUTES=750
 
 # === CHECKS ===
 for BIN in $BIN_DEPS; do
