@@ -125,7 +125,7 @@ backup()
 
                     f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
 
-                    if [ $COMPRESS eq 'bzip2' ]; then
+                    if [ $COMPRESS -eq 'bzip2' ]; then
 					
 						if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
 							rm $DST/$BDD/$TABLE.txt.bz2
@@ -133,7 +133,7 @@ backup()
 					
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2 && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2) &
 						
-                    elif [ $COMPRESS eq 'gzip' ]; then
+                    elif [ $COMPRESS -eq 'gzip' ]; then
 					
 						if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
 							rm $DST/$BDD/$TABLE.txt.gz
