@@ -131,10 +131,10 @@ backup()
 
 			if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
 				f_log "Exclude data from table $TABLE"
-				continue
-			fi
-			
-            mysqldump --defaults-file=$CONFIG_FILE -T $DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+				mysqldump --defaults-file=$CONFIG_FILE --no-data -T $DST/$v/ $BDD $TABLE 2>> $DST/$BDD/error.log
+			else
+				mysqldump --defaults-file=$CONFIG_FILE -T $DST/$v/ $BDD $TABLE 2>> $DST/$BDD/error.log
+			fi            
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
