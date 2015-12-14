@@ -79,14 +79,14 @@ backup()
     )
 
     local array_views=()
-	
-    touch $DST/$BDD/error.log
 
     database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
     f_log "Exclude databases: $database_exclude_expression"
 
     for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
+	
+		touch $DST/$BDD/error.log
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
