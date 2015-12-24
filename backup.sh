@@ -194,6 +194,12 @@ EXCLUDE_DATA_TABLES=''
 BIN_DEPS="mysql mysqldump $COMPRESS"
 
 # === CHECKS ===
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
+
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1
     if [ $? -ne 0 ]; then
