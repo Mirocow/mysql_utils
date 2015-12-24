@@ -197,7 +197,7 @@ BIN_DEPS="mysql mysqldump $COMPRESS"
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1
     if [ $? -ne 0 ]; then
-        echo "Error: Required commad file not be found: $BIN"
+        echo "Error: Required command file not be found: $BIN"
         exit 1
     fi
 done
