@@ -12,6 +12,8 @@ CONFIG_FILE='/etc/mysql/debian.cnf'
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
+if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
+
 # === FUNCTION ===
 f_log()
 {
