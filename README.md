@@ -19,6 +19,13 @@ Backup all databases
     cd mysql_utils
     bash backup.sh
 
+Backup selected database   
+======
+
+    cd ~
+    cd mysql_utils
+    bash backup_db.sh <[database-name]>
+
 Restore for selected date
 =======
 
