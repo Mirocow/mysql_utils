@@ -4,7 +4,7 @@ VERBOSE=0
 COMPRESS='bzip2'
 USER='mysql'
 GROUP='mysql'
-DIRECTORYATTRIBUTES=750
+DIRECTORYATTRIBUTES='a+rwx'
 FILEATTRIBUTES=640
 TIME_REMOVED_DUMP_FILES='1 week ago'
 BACKUP_DIR='/var/backups/mysql'
@@ -88,7 +88,7 @@ backup()
 
     for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 	
-		touch $DST/$BDD/error.log
+	touch $DST/$BDD/error.log
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
