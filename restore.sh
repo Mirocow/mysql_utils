@@ -6,6 +6,10 @@ BIN_DEPS='bunzip2 bzip2 mysql'
 MYCNF='/etc/mysql/debian.cnf'
 MYDATA='/var/lib/mysql'
 
+# === DO NOT EDIT BELOW THIS LINE ===
+
+if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
+
 # === FUNCTIONS ===
 database_exists()
 {
