@@ -6,6 +6,11 @@ BIN_DEPS='bunzip2 bzip2 mysql'
 MYCNF='/etc/mysql/debian.cnf'
 DATABASES_TABLE_CHECK=1
 
+# === DO NOT EDIT BELOW THIS LINE ===
+
+if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
+
+# === FUNCTIONS ===
 f_log()
 {
 	echo "RESTORE: $@"
