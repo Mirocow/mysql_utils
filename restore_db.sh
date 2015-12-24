@@ -11,6 +11,12 @@ DATABASES_TABLE_CHECK=1
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
+
 f_log()
 {
 	echo "RESTORE: $@"
