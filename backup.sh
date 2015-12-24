@@ -56,7 +56,7 @@ EOF
 
 prepaire_skip_expression()
 {
-    local array_skip=("${@}")
+    local array_skip=( "${@}" )
     for skip in "${array_skip[@]}"; do
         if [ -x $return ]; then
             local return="^$skip\$"
