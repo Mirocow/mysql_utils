@@ -261,6 +261,7 @@ DSTOLD=$BACKUP_DIR/$DATEOLD
 if [ ! -d "$DST" ]; then
     mkdir -p $DST;
     chmod $DIRECTORYATTRIBUTES $DST;
+    chown $USER:$GROUP $DST;
 fi
 
 if [ -d "$DSTOLD" ]; then
