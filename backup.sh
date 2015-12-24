@@ -28,7 +28,7 @@ usage()
     
         This mysql backup engine.
     
-        Usage:  $0 <[options]>
+        Usage:  $0 <[options]> or bash $0 <[options]>
 
 Options:
    -e= | --exclude=                     Exclude databases
