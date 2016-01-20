@@ -121,10 +121,10 @@ restore()
 											
 											if [ -f "$DIR_PWD/$BDD/$TABLE.txt" ]; then
 												f_log "+ $TABLE"
-												mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0;
+												mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 																				LOAD DATA LOCAL INFILE '$DIR_PWD/$BDD/$TABLE.txt'
 																				INTO TABLE $TABLE;
-																				SET foreign_key_checks = 1;"
+																				SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
 																														
 												if [ ! -f "$DIR_PWD/$BDD/$TABLE.txt.bz2" ]; then
 													f_log "> $TABLE"
