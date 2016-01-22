@@ -14,6 +14,13 @@ CONFIG_FILE='/etc/mysql/debian.cnf'
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
+# === FUNCTIONS ===
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
+
 # === FUNCTION ===
 f_log()
 {
@@ -22,37 +29,6 @@ f_log()
     if [ $VERBOSE -eq 1 ]; then
         echo "BACKUP: $@"
     fi
-}
-
-usage()
-{
-    cat << EOF
-    
-        This mysql backup engine.
-    
-        Usage:  $0 <[database-name]> <[options]> or bash $0 <[database-name]> <[options]>
-
-Options:
-   --exclude-tables=                    Exclude tables
-   --exclude-data-tables=               Exclude data tables
-   -c= | --compress=                    Compress with gzip or bzip2
-   -v  | --verbose                      Add verbose into output
-   -l  | --lifetime=                    Lifetime for dump files
-   --config=                            Config file of Debian format
-   --dir=                               Backup directory
-   -h  | --help                         This text
-
-Examples:
-        backup.sh --verbose --compress=
-        backup.sh --verbose --compress=zgip
-        backup.sh --verbose --compress=bzip2
-        backup.sh --verbose --compress="
-        backup.sh --verbose --compress= --lifetime="3 day ago"
-        backup.sh --verbose --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-EOF
 }
 
 prepaire_skip_expression()
@@ -174,6 +150,37 @@ backup()
     f_log " END "
 }
 
+usage()
+{
+    cat << EOF
+    
+        This mysql backup engine.
+    
+        Usage:  $0 <[database-name]> <[options]> or bash $0 <[database-name]> <[options]>
+
+Options:
+   --exclude-tables=                    Exclude tables
+   --exclude-data-tables=               Exclude data tables
+   -c= | --compress=                    Compress with gzip or bzip2
+   -v  | --verbose                      Add verbose into output
+   -l  | --lifetime=                    Lifetime for dump files
+   --config=                            Config file of Debian format
+   --dir=                               Backup directory
+   -h  | --help                         This text
+
+Examples:
+        backup.sh --verbose --compress=
+        backup.sh --verbose --compress=zgip
+        backup.sh --verbose --compress=bzip2
+        backup.sh --verbose --compress=
+        backup.sh --verbose --compress= --lifetime="3 day ago"
+        backup.sh --verbose --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
+EOF
+}
+
 if [ $# = 0 ]; then
     usage;
     exit;
@@ -184,12 +191,7 @@ EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
 BIN_DEPS="mysql mysqldump $COMPRESS"
 
-# === CHECKS ===
-if [ "$#" -ne 1 ]; then
-    echo "Illegal number of parameters"
-else
-	DATABASE="$1"
-fi
+DATABASE="$1"
 
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1

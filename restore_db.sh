@@ -1,22 +1,13 @@
-#!/bin/sh
+#!/bin/bash
 
 # === CONFIG ===
-DIR_PWD=$(pwd)
-BIN_DEPS='bunzip2 bzip2 mysql'
-MYCNF='/etc/mysql/debian.cnf'
-DATABASES_TABLE_CHECK=1
+CONFIG_CHUNK=1000000
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
-if [ -f '/etc/debian_version' ]; then
-    CONFIG_FILE='/etc/mysql/debian.cnf'
-else
-    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
-fi
-
 f_log()
 {
 	echo "RESTORE: $@"
@@ -24,80 +15,87 @@ f_log()
 
 restore()
 {
-  PATH=$@
+  DIR=$@
 
-  f_log "Check path $PATH"
+  f_log "Check path $DIR"
+	
+	f_log "** START **"
 
-  BDD=${PATH##*/}
+  BDD=${DIR##*/}
 
   if [ $BDD ]; then
 
-    f_log "Found backup files $PATH"
+    f_log "Found backup files $DIR"
 
-    if [ -f $PATH/__create.sql ]; then
+    if [ -f $DIR/__create.sql ]; then
       f_log "Create database $BDD"
-      /usr/bin/mysql --defaults-extra-file=$MYCNF < $PATH/__create.sql 2>/dev/null
+      time mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
     fi
 
-    tables=$(/bin/ls -1 $PATH |  /bin/grep -v __ | /usr/bin/awk -F. '{print $1}' | /usr/bin/sort | /usr/bin/uniq)
+    tables=$(ls -1 $DIR |  grep -v __ | awk -F. '{print $1}' | sort | uniq)
 
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
-            f_log "Create table: $BDD/$TABLE"
-            /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
-                            DROP TABLE IF EXISTS $TABLE;
-                            SOURCE $PATH/$TABLE.sql;
-                            SET foreign_key_checks = 1;"
+      f_log "Create table: $BDD/$TABLE"
+      time mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+                      DROP TABLE IF EXISTS $TABLE;
+                      SOURCE $DIR/$TABLE.sql;
+                      SET foreign_key_checks = 1;"
     done
 
     f_log "Import data into $BDD"
     for TABLE in $tables; do
-            f_log "Import data into $BDD/$TABLE"
-            if [ -f "$PATH/$TABLE.txt.bz2" ]; then
-                f_log "< $TABLE"
-                if [ -f "$PATH/$TABLE.txt" ]; then
-                  f_log "rm $PATH/$TABLE.txt"
-                  /bin/rm $PATH/$TABLE.txt
-                fi
-                /bin/bunzip2 $PATH/$TABLE.txt.bz2
-            fi
+			
+      f_log "Import data into $BDD/$TABLE"
+      if [ -f "$DIR/$TABLE.txt.bz2" ]; then
+          f_log "< $TABLE"
+          if [ -f "$DIR/$TABLE.txt" ]; then
+            f_log "rm $DIR/$TABLE.txt"
+            rm $DIR/$TABLE.txt
+          fi
+          bunzip2 $DIR/$TABLE.txt.bz2
+      fi
 
-            if [ -f "$PATH/$TABLE.txt" ]; then
-              f_log "+ $TABLE"
-              /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-                              LOAD DATA LOCAL INFILE '$PATH/$TABLE.txt'
-                              INTO TABLE $TABLE;
-                              SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
-
-              if [ ! -f "$PATH/$TABLE.txt.bz2" ]; then
-                f_log "> $TABLE"
-                /bin/bzip2 $PATH/$TABLE.txt
-              fi
-            fi
-            if [ $DATABASES_TABLE_CHECK ]; then
-              # Check INNODB table
-              if [ -f "$PATH/$TABLE.ibd" ]; then
-                if [ ! $(innochecksum $PATH/$TABLE.ibd) ]; then
-                  f_log "$TABLE [OK]"
-                else
-                  f_log "$TABLE [ERR]"
-                fi
-              fi
-            fi
+      if [ -f "$DIR/$TABLE.txt" ]; then
+        f_log "+ $TABLE"
+				split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
+				for segment in ${TABLE}_part_*; do 
+          time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+                          LOAD DATA LOCAL INFILE '$segment'
+                          INTO TABLE $TABLE;
+                          SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+					rm $segment  
+        done
+        if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
+          f_log "> $TABLE"
+          bzip2 $DIR/$TABLE.txt
+        fi
+      fi
+			
+			if [ $DATABASES_TABLE_CHECK ]; then
+				if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
+					if [ ! $(innochecksum $DIR/$BDD/$TABLE.ibd) ]; then
+						f_log "$TABLE [OK]"
+					else
+						f_log "$TABLE [ERR]"
+					fi
+				fi
+			fi
+			
     done
 
-    if [ -f "$PATH/__routines.sql" ]; then
-        f_log "Import routines into $BDD"
-        /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD < $PATH/__routines.sql 2>/dev/null
+    if [ -f "$DIR/__routines.sql" ]; then
+      f_log "Import routines into $BDD"
+      time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
     fi
 
-    if [ -f "$PATH/__views.sql" ]; then
-        f_log "Import views into $BDD"
-        /usr/bin/mysql --defaults-extra-file=$MYCNF $BDD < $PATH/__views.sql 2>/dev/null
+    if [ -f "$DIR/__views.sql" ]; then
+      f_log "Import views into $BDD"
+      time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
-    /usr/bin/mysql --defaults-extra-file=$MYCNF -e "flush privileges;"
+    time mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
 
     f_log "** END **"
 
@@ -108,4 +106,71 @@ restore()
   fi
 }
 
-restore $DIR_PWD
+usage()
+{
+cat << EOF
+usage: $0 options
+
+This script restore databases.
+
+OPTIONS:
+   -e      Exclude databases
+	 -s			 Selected databases
+	 -c			 Check innochecksum of table after import
+EOF
+}
+
+# === CHECKS ===
+if [ $# = 0 ]; then
+    usage;
+    exit;
+fi
+
+BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
+
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
+
+for BIN in $BIN_DEPS; do
+    which $BIN 1>/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Required command file not be found: $BIN"
+        exit 1
+    fi
+done
+
+for i in "$@"
+do
+    case $i in
+        --config=*)
+            CONFIG_FILE=( "${i#*=}" )
+            shift # past argument=value
+        ;;
+        --chunk=*)
+            CONFIG_CHUNK=( "${i#*=}" )
+            shift # past argument=value
+        ;;				
+        -c)
+						DATABASES_TABLE_CHECK=1
+						shift
+				;;				
+        -v | --verbose)
+            VERBOSE=1
+            shift # past argument=value
+        ;;
+        -h | --help)
+            usage
+            exit
+        ;;
+        *)
+        # unknown option
+        ;;
+    esac
+done
+
+# === AUTORUN ===
+restore $(pwd)
+

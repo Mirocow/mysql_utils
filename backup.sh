@@ -24,38 +24,6 @@ f_log()
     fi
 }
 
-usage()
-{
-    cat << EOF
-    
-        This mysql backup engine.
-    
-        Usage:  $0 <[options]> or bash $0 <[options]>
-
-Options:
-   -e= | --exclude=                     Exclude databases
-   --exclude-tables=                    Exclude tables
-   --exclude-data-tables=               Exclude data tables
-   -c= | --compress=                    Compress with gzip or bzip2
-   -v  | --verbose                      Add verbose into output
-   -l  | --lifetime=                    Lifetime for dump files
-   --config=                            Config file of Debian format
-   --dir=                               Backup directory
-   -h  | --help                         This text
-
-Examples:
-        backup.sh --verbose --compress=
-        backup.sh --verbose --compress=zgip
-        backup.sh --verbose --compress=bzip2
-        backup.sh --verbose --compress= --exclude="mysql"
-        backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
-        backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-EOF
-}
-
 prepaire_skip_expression()
 {
     local array_skip=( "${@}" )
@@ -88,7 +56,7 @@ backup()
 
     for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 	
-	touch $DST/$BDD/error.log
+				touch $DST/$BDD/error.log
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
@@ -154,19 +122,19 @@ backup()
 
                     if [ $COMPRESS == 'bzip2' ]; then
 					
-						if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-							rm $DST/$BDD/$TABLE.txt.bz2
-						fi					
+												if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+													rm $DST/$BDD/$TABLE.txt.bz2
+												fi					
 					
-                        ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2 && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2) &
+                        ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2) &
 						
                     elif [ $COMPRESS == 'gzip' ]; then
 					
-						if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-							rm $DST/$BDD/$TABLE.txt.gz
-						fi					
+												if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+													rm $DST/$BDD/$TABLE.txt.gz
+												fi					
 					
-                        ($COMPRESS $DST/$BDD/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz) &
+                        ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz) &
 						
                     fi
 
@@ -183,6 +151,38 @@ backup()
     f_log " END "
 }
 
+usage()
+{
+    cat << EOF
+    
+        This mysql backup engine.
+    
+        Usage:  $0 <[options]> or bash $0 <[options]>
+
+Options:
+   -e= | --exclude=                     Exclude databases
+   --exclude-tables=                    Exclude tables
+   --exclude-data-tables=               Exclude data tables
+   -c= | --compress=                    Compress with gzip or bzip2
+   -v  | --verbose                      Add verbose into output
+   -l  | --lifetime=                    Lifetime for dump files
+   --config=                            Config file of Debian format
+   --dir=                               Backup directory
+   -h  | --help                         This text
+
+Examples:
+        backup.sh --verbose --compress=
+        backup.sh --verbose --compress=zgip
+        backup.sh --verbose --compress=bzip2
+        backup.sh --verbose --compress= --exclude="mysql"
+        backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
+        backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
+        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
+EOF
+}
+
 if [ $# = 0 ]; then
     usage;
     exit;
@@ -194,12 +194,6 @@ EXCLUDE_DATA_TABLES=''
 BIN_DEPS="mysql mysqldump $COMPRESS"
 
 # === CHECKS ===
-if [ -f '/etc/debian_version' ]; then
-    CONFIG_FILE='/etc/mysql/debian.cnf'
-else
-    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
-fi
-
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1
     if [ $? -ne 0 ]; then
@@ -207,6 +201,12 @@ for BIN in $BIN_DEPS; do
         exit 1
     fi
 done
+
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
 
 for i in "$@"
 do
