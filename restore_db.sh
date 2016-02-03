@@ -121,10 +121,10 @@ EOF
 }
 
 # === CHECKS ===
-if [ $# = 0 ]; then
-    usage;
-    exit;
-fi
+#if [ $# = 0 ]; then
+#    usage;
+#    exit;
+#fi
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
@@ -154,9 +154,9 @@ do
             shift # past argument=value
         ;;				
         -c)
-						DATABASES_TABLE_CHECK=1
-						shift
-				;;				
+            DATABASES_TABLE_CHECK=1
+            shift
+	;;				
         -v | --verbose)
             VERBOSE=1
             shift # past argument=value
