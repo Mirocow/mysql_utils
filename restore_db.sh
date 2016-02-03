@@ -58,13 +58,13 @@ restore()
 
       if [ -f "$DIR/$TABLE.txt" ]; then
         f_log "+ $TABLE"
-				split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
-				for segment in ${TABLE}_part_*; do 
+		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
+		for segment in ${TABLE}_part_*; do 
           time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-                          LOAD DATA LOCAL INFILE '$segment'
-                          INTO TABLE $TABLE;
-                          SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
-					rm $segment  
+                  LOAD DATA LOCAL INFILE '$segment'
+                  INTO TABLE $TABLE;
+                  SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+				rm $segment  
         done
         if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
           f_log "> $TABLE"
@@ -72,15 +72,15 @@ restore()
         fi
       fi
 			
-			if [ $DATABASES_TABLE_CHECK ]; then
-				if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
-					if [ ! $(innochecksum $DIR/$BDD/$TABLE.ibd) ]; then
-						f_log "$TABLE [OK]"
-					else
-						f_log "$TABLE [ERR]"
-					fi
-				fi
+	if [ $DATABASES_TABLE_CHECK ]; then
+		if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
+			if [ ! $(innochecksum $DIR/$BDD/$TABLE.ibd) ]; then
+				f_log "$TABLE [OK]"
+			else
+				f_log "$TABLE [ERR]"
 			fi
+		fi
+	fi
 			
     done
 
