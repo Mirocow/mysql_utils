@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# === CONFIG ===
 VERBOSE=0
 COMPRESS='bzip2'
 USER='mysql'
