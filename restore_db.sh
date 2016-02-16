@@ -37,7 +37,7 @@ restore()
       time mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
     fi
 
-    tables=$(ls -1 $DIR |  grep -v __ | grep -v _part_  | awk -F. '{print $1}' | sort | uniq)
+    tables=$(ls -1 $DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
