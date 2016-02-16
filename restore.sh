@@ -24,7 +24,7 @@ f_log()
     logger "RESTORE: $@"
 	
     if [ $VERBOSE -eq 1 ]; then
-        echo "BACKUP: $@"
+        echo "RESTORE: $@"
     fi	
 }
 
