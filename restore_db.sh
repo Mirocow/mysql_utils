@@ -133,12 +133,6 @@ OPTIONS:
 EOF
 }
 
-# === CHECKS ===
-#if [ $# = 0 ]; then
-#    usage;
-#    exit;
-#fi
-
 BACKUP_DIR=$(pwd)
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
