@@ -117,9 +117,9 @@ restore()
 								SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
 						done
 						
-						if [ -f "$DIR/$BDD/$segment" ]; then
+						if [ -f "$segment" ]; then
 							f_log "Delete segment $segment"
-							rm "$DIR/$BDD/$segment"
+							rm "$segment"
 						fi
 						
 						if [ ! -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
