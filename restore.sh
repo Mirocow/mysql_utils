@@ -115,6 +115,7 @@ restore()
 								INTO TABLE $TABLE;
 								SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
 							if [ -f "$DIR/$BDD/$segment" ]; then
+								f_log "Delete segment $segment"
 								rm $segment
 							fi
 						done																		
