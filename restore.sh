@@ -111,6 +111,7 @@ restore()
 						
 						split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" "$DIR/$BDD/${TABLE}_part_"
 						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
+							f_log "Restore from $segment"
 							time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 								LOAD DATA LOCAL INFILE '$segment'
 								INTO TABLE $TABLE;
@@ -214,6 +215,10 @@ do
             CONFIG_FILE=( "${i#*=}" )
             shift # past argument=value
         ;;
+        --chunk=*)
+            CONFIG_CHUNK=( "${i#*=}" )
+            shift # past argument=value
+        ;;        
         -v | --verbose)
             VERBOSE=1
             shift # past argument=value
