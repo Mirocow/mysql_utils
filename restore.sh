@@ -20,7 +20,11 @@ database_exists()
 
 f_log() 
 {
-	logger "RESTORE: $@"
+    logger "RESTORE: $@"
+	
+    if [ $VERBOSE -eq 1 ]; then
+        echo "BACKUP: $@"
+    fi	
 }
 
 restore()
@@ -157,8 +161,8 @@ This script restore databases.
 
 OPTIONS:
    -e      Exclude databases
-	 -s			 Selected databases
-	 -c			 Check innochecksum of table after import
+   -s      Selected databases
+   -c      Check innochecksum of table after import
 EOF
 }
 
@@ -167,6 +171,8 @@ if [ $# = 0 ]; then
     usage;
     exit;
 fi
+
+BACKUP_DIR=$(pwd)
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
@@ -187,18 +193,18 @@ done
 for i in "$@"
 do
     case $i in
-        -e)
-						DATABASES_SKIP=( "${i#*=}" )
-						shift
-				;;
-        -s)
-						DATABASES_SELECTED=( "${i#*=}" )
-						shift
-				;;
-        -c)
-						DATABASES_TABLE_CHECK=1
-						shift
-				;;								
+	-e)
+	    DATABASES_SKIP=( "${i#*=}" )
+	    shift
+	;;
+	-s)
+	    DATABASES_SELECTED=( "${i#*=}" )
+	    shift
+	;;
+	-c)
+	    DATABASES_TABLE_CHECK=1
+	    shift
+	;;								
         --config=*)
             CONFIG_FILE=( "${i#*=}" )
             shift # past argument=value
@@ -216,6 +222,15 @@ do
         ;;
     esac
 done
+
+# === SETTINGS ===
+f_log "============================================"
+f_log "Dump into: $BACKUP_DIR"
+f_log "Config file: $CONFIG_FILE"
+f_log "Verbose: $VERBOSE"
+f_log "Selected databases: $DATABASES_SELECTED"
+f_log "============================================"
+f_log ""
 
 # === AUTORUN ===
 restore $(pwd)
