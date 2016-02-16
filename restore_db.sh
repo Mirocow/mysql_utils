@@ -2,6 +2,7 @@
 
 # === CONFIG ===
 CONFIG_CHUNK=1000000
+VERBOSE=0
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -10,7 +11,11 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 # === FUNCTIONS ===
 f_log()
 {
-	echo "RESTORE: $@"
+    echo "RESTORE: $@"
+	
+    if [ $VERBOSE -eq 1 ]; then
+        echo "RESTORE: $@"
+    fi	
 }
 
 restore()
@@ -32,7 +37,7 @@ restore()
       time mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
     fi
 
-    tables=$(ls -1 $DIR |  grep -v __ | awk -F. '{print $1}' | sort | uniq)
+    tables=$(ls -1 $DIR |  grep -v __ | grep -v _part_  | awk -F. '{print $1}' | sort | uniq)
 
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
@@ -58,23 +63,31 @@ restore()
 
       if [ -f "$DIR/$TABLE.txt" ]; then
         f_log "+ $TABLE"
-		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
-		for segment in ${TABLE}_part_*; do 
-          time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-                  LOAD DATA LOCAL INFILE '$segment'
-                  INTO TABLE $TABLE;
-                  SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
-				rm $segment  
-        done
-        if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
-          f_log "> $TABLE"
-          bzip2 $DIR/$TABLE.txt
-        fi
+        
+	split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
+	for segment in "$DIR/${TABLE}"_part_*; do
+		f_log "Restore from $segment"
+		time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+			LOAD DATA LOCAL INFILE '$segment'
+			INTO TABLE $TABLE;
+			SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+	done
+	
+	if [ -f "$segment" ]; then
+		f_log "Delete segment $segment"
+		rm "$segment"
+	fi
+						
+	if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
+		f_log "> $TABLE"
+		bzip2 $DIR/$TABLE.txt
+	fi
+						
       fi
 			
 	if [ $DATABASES_TABLE_CHECK ]; then
 		if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
-			if [ ! $(innochecksum $DIR/$BDD/$TABLE.ibd) ]; then
+			if [ ! $(innochecksum $DIR/$TABLE.ibd) ]; then
 				f_log "$TABLE [OK]"
 			else
 				f_log "$TABLE [ERR]"
@@ -86,16 +99,16 @@ restore()
 
     if [ -f "$DIR/__routines.sql" ]; then
       f_log "Import routines into $BDD"
-      time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
+      mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
     fi
 
     if [ -f "$DIR/__views.sql" ]; then
       f_log "Import views into $BDD"
-      time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
+      mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
-    time mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
+    mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
 
     f_log "** END **"
 
@@ -125,6 +138,8 @@ EOF
 #    usage;
 #    exit;
 #fi
+
+BACKUP_DIR=$(pwd)
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
@@ -171,6 +186,14 @@ do
     esac
 done
 
+# === SETTINGS ===
+f_log "============================================"
+f_log "Restore from: $BACKUP_DIR"
+f_log "Config file: $CONFIG_FILE"
+f_log "Verbose: $VERBOSE"
+f_log "============================================"
+f_log ""
+
 # === AUTORUN ===
-restore $(pwd)
+restore $BACKUP_DIR
 
