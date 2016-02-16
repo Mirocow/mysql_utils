@@ -167,10 +167,6 @@ EOF
 }
 
 # === CHECKS ===
-if [ $# = 0 ]; then
-    usage;
-    exit;
-fi
 
 BACKUP_DIR=$(pwd)
 
