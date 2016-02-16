@@ -71,13 +71,13 @@ restore()
 			LOAD DATA LOCAL INFILE '$segment'
 			INTO TABLE $TABLE;
 			SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+			
+		if [ -f "$segment" ]; then
+			f_log "Delete segment $segment"
+			rm "$segment"
+		fi			
 	done
 	
-	if [ -f "$segment" ]; then
-		f_log "Delete segment $segment"
-		rm "$segment"
-	fi
-						
 	if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
 		f_log "> $TABLE"
 		bzip2 $DIR/$TABLE.txt
