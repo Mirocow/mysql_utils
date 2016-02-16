@@ -110,10 +110,12 @@ restore()
 									split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
 									for segment in ${TABLE}_part_*; do
 										time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-																		LOAD DATA LOCAL INFILE '$DIR/$BDD/$TABLE.txt'
+																		LOAD DATA LOCAL INFILE '$DIR/$BDD/$segment'
 																		INTO TABLE $TABLE;
 																		SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
-										rm $segment								
+										if [ -f "$DIR/$BDD/$segment" ]; then
+											rm $segment
+										fi
 									done																		
 									if [ ! -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
 										f_log "> $TABLE"
