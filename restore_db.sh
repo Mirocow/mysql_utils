@@ -128,8 +128,8 @@ This script restore databases.
 
 OPTIONS:
    -e      Exclude databases
-	 -s			 Selected databases
-	 -c			 Check innochecksum of table after import
+   -s      Selected databases
+   -c      Check innochecksum of table after import
 EOF
 }
 
