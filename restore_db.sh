@@ -34,7 +34,7 @@ restore()
 
     if [ -f $DIR/__create.sql ]; then
       f_log "Create database $BDD"
-      time mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
+      mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
     fi
 
     tables=$(ls -1 $DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
@@ -42,7 +42,7 @@ restore()
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
       f_log "Create table: $BDD/$TABLE"
-      time mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+      mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
                       DROP TABLE IF EXISTS $TABLE;
                       SOURCE $DIR/$TABLE.sql;
                       SET foreign_key_checks = 1;"
