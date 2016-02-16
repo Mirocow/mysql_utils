@@ -9,9 +9,16 @@ VERBOSE=0
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
-f_log()
+f_log() 
 {
-    echo "RESTORE: $@"
+    local bold=$(tput bold)
+    local yellow=$(tput setf 6)
+    local red=$(tput setf 4)
+    local green=$(tput setf 2)
+    local reset=$(tput sgr0)
+    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
+	
+    logger "RESTORE: $@"
 	
     if [ $VERBOSE -eq 1 ]; then
         echo "RESTORE: $@"
