@@ -86,11 +86,11 @@ restore()
 						
 							f_log "Create tables in $BDD"
 							for TABLE in $tables; do							
-											f_log "Create table: $BDD/$TABLE"
-											time mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
-																			DROP TABLE IF EXISTS $TABLE;
-																			SOURCE $DIR/$BDD/$TABLE.sql;
-																			SET foreign_key_checks = 1;"
+							f_log "Create table: $BDD/$TABLE"
+							time mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+													DROP TABLE IF EXISTS $TABLE;
+													SOURCE $DIR/$BDD/$TABLE.sql;
+													SET foreign_key_checks = 1;"
 							done
 							
 							f_log "Import data into $BDD"		
@@ -107,7 +107,7 @@ restore()
 								
 								if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
 									f_log "+ $TABLE"
-									split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
+									split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" ${TABLE}_part_
 									for segment in ${TABLE}_part_*; do
 										time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 																		LOAD DATA LOCAL INFILE '$DIR/$BDD/$segment'
