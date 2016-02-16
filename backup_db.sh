@@ -170,7 +170,7 @@ Options:
 
 Examples:
         backup.sh --verbose --compress=
-        backup.sh --verbose --compress=zgip
+        backup.sh --verbose --compress=gzip
         backup.sh --verbose --compress=bzip2
         backup.sh --verbose --compress=
         backup.sh --verbose --compress= --lifetime="3 day ago"
