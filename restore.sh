@@ -11,7 +11,7 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 # === FUNCTIONS ===
 database_exists()
 {
-	RESULT=`mysqlshow --defaults-extra-file=$MYCNF $@| grep -v Wildcard | grep -o $@`
+	RESULT=`mysqlshow --defaults-extra-file=$CONFIG_FILE $@| grep -v Wildcard | grep -o $@`
 	if [ "$RESULT" == "$@" ]; then
 			echo YES
 	else
@@ -75,7 +75,7 @@ restore()
 					
 						if [ -f $DIR/$BDD/__create.sql ]; then
 							f_log "Create database $BDD"
-							time mysql --defaults-extra-file=$MYCNF < $DIR/$BDD/__create.sql 2>/dev/null
+							time mysql --defaults-extra-file=$CONFIG_FILE < $DIR/$BDD/__create.sql 2>/dev/null
 						fi
 						
 						if [ $(database_exists $BDD) != "YES" ]; then
@@ -87,7 +87,7 @@ restore()
 							f_log "Create tables in $BDD"
 							for TABLE in $tables; do							
 											f_log "Create table: $BDD/$TABLE"
-											time mysql --defaults-extra-file=$MYCNF $BDD -e "SET foreign_key_checks = 0;
+											time mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
 																			DROP TABLE IF EXISTS $TABLE;
 																			SOURCE $DIR/$BDD/$TABLE.sql;
 																			SET foreign_key_checks = 1;"
@@ -109,7 +109,7 @@ restore()
 									f_log "+ $TABLE"
 									split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" ${TABLE}_part_
 									for segment in ${TABLE}_part_*; do
-										time mysql --defaults-extra-file=$MYCNF $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+										time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 																		LOAD DATA LOCAL INFILE '$DIR/$BDD/$TABLE.txt'
 																		INTO TABLE $TABLE;
 																		SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
@@ -135,12 +135,12 @@ restore()
 							
 							if [ -f "$DIR/$BDD/__routines.sql" ]; then
 									f_log "Import routines into $BDD"
-									time mysql --defaults-extra-file=$MYCNF $BDD < $DIR/$BDD/__routines.sql 2>/dev/null
+									time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/$BDD/__routines.sql 2>/dev/null
 							fi
 							
 							if [ -f "$DIR/$BDD/__views.sql" ]; then
 									f_log "Import views into $BDD"
-									time mysql --defaults-extra-file=$MYCNF $BDD < $DIR/$BDD/__views.sql 2>/dev/null
+									time mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/$BDD/__views.sql 2>/dev/null
 							fi
 							
 						fi
@@ -148,7 +148,7 @@ restore()
 	done
 
 	f_log "Flush privileges;"
-	time mysql --defaults-extra-file=$MYCNF -e "flush privileges;"
+	time mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
 
 	f_log "** END **"
 }
