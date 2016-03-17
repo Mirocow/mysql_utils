@@ -109,7 +109,7 @@ restore()
 						if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
 							rm $DIR/$BDD/$TABLE.txt
 						fi
-						bunzip2 $DIR/$BDD/$TABLE.txt.bz2
+						bunzip2 -k $DIR/$BDD/$TABLE.txt.bz2
 					fi
 					
 					if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
@@ -130,9 +130,9 @@ restore()
 							fi								
 						done
 						
-						if [ ! -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
-							f_log "> $TABLE"
-							bzip2 $DIR/$BDD/$TABLE.txt
+						if [ -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
+							f_log "Delete source: $TABLE.txt"
+							rm $DIR/$BDD/$TABLE.txt
 						fi
 						
 					fi
