@@ -68,7 +68,7 @@ restore()
           bunzip2 -k $DIR/$TABLE.txt.bz2
       fi
 
-      if [ -f "$DIR/$TABLE.txt" ]; then
+      if [ -s "$DIR/$TABLE.txt" ]; then
         f_log "+ $TABLE"
         
 	split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
