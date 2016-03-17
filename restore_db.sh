@@ -65,7 +65,7 @@ restore()
             f_log "rm $DIR/$TABLE.txt"
             rm $DIR/$TABLE.txt
           fi
-          bunzip2 $DIR/$TABLE.txt.bz2
+          bunzip2 -k $DIR/$TABLE.txt.bz2
       fi
 
       if [ -f "$DIR/$TABLE.txt" ]; then
@@ -86,8 +86,8 @@ restore()
 	done
 	
 	if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
-		f_log "> $TABLE"
-		bzip2 $DIR/$TABLE.txt
+		f_log "Delete source file: $TABLE.txt"
+		rm $DIR/$TABLE.txt
 	fi
 						
       fi
