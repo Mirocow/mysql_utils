@@ -185,6 +185,8 @@ Examples:
         backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
+				
+				
 EOF
 }
 

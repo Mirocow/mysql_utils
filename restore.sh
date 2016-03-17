@@ -113,13 +113,20 @@ restore()
 					fi
 					
 					if [ -s "$DIR/$BDD/$TABLE.txt" ]; then
+						
+						if [ ! -z "$(cat $DIR/$BDD/$TABLE.sql | grep -i 'DEFAULT CHARSET=CP1251')" ]; then
+							charset='cp1251'
+						else
+							charset='utf8'
+						fi	
 					
-						f_log "+ $TABLE"
+						f_log "+ $TABLE, Set default charset: $charset"
 						
 						split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" "$DIR/$BDD/${TABLE}_part_"
 						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
 							f_log "Restore from $segment"
-							time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+								mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+								SET character_set_database = $charset;
 								LOAD DATA LOCAL INFILE '$segment'
 								INTO TABLE $TABLE;
 								SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
@@ -130,12 +137,12 @@ restore()
 							fi								
 						done
 						
-						if [ -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
-							f_log "Delete source: $TABLE.txt"
-							rm $DIR/$BDD/$TABLE.txt
-						fi
-						
 					fi
+					
+					if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
+						f_log "Delete source: $TABLE.txt"
+						rm $DIR/$BDD/$TABLE.txt
+					fi					
 					
 					if [ $DATABASES_TABLE_CHECK ]; then
 						if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
@@ -180,6 +187,8 @@ OPTIONS:
    -e      Exclude databases
    -s      Selected databases
    -c      Check innochecksum of table after import
+	 
+	 
 EOF
 }
 
