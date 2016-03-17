@@ -112,7 +112,7 @@ restore()
 						bunzip2 -k $DIR/$BDD/$TABLE.txt.bz2
 					fi
 					
-					if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
+					if [ -s "$DIR/$BDD/$TABLE.txt" ]; then
 					
 						f_log "+ $TABLE"
 						
