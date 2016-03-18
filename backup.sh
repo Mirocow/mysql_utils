@@ -1,294 +1,314 @@
 #!/bin/bash
 
-# === CONFIG ===
-VERBOSE=0
-COMPRESS='bzip2'
-USER='mysql'
-GROUP='mysql'
-DIRECTORYATTRIBUTES=0770
-FILEATTRIBUTES=640
-TIME_REMOVED_DUMP_FILES='1 week ago'
-BACKUP_DIR='/var/backups/mysql'
-CONFIG_FILE='/etc/mysql/debian.cnf'
-
-# === DO NOT EDIT BELOW THIS LINE ===
-
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
-# === FUNCTION ===
-f_log()
+function create_site()
 {
-    local bold=$(tput bold)
-    local yellow=$(tput setf 6)
-    local red=$(tput setf 4)
-    local green=$(tput setf 2)
-    local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
-    
-    logger "BACKUP: $@"
 
-    if [ $VERBOSE -eq 1 ]; then
-        echo "BACKUP: $@"
-    fi
-}
+    site_name=$HOST
+	site_addr=$IP
 
-prepaire_skip_expression()
-{
-    local array_skip=( "${@}" )
-    for skip in "${array_skip[@]}"; do
-        if [ -x $return ]; then
-            local return="^$skip\$"
-        else
-            return="$return|^$skip\$"
-        fi
-    done
-    echo ${return}
-}
+	authpassword=$(date +%s | sha256sum | base64 | head -c 6 ; echo)
+	sleep 1
+	password=$(date +%s | sha256sum | base64 | head -c 16 ; echo)
 
-backup()
-{
-    f_log " START "
+	deluser ${site_name}
+	rm -r /home/${site_name}
+	mkdir /home/${site_name}
+	mkdir /home/${site_name}/logs
+	mkdir /home/${site_name}/httpdocs
+	mkdir /home/${site_name}/httpdocs/web
+	useradd -d /home/${site_name} ${site_name}
+	usermod -G www-data ${site_name}
+	echo ${site_name}:${password} | chpasswd
+	mkdir /home/${site_name}/.ssh
+	chmod 0700 /home/${site_name}/.ssh
+	ssh-keygen -t rsa -N "${site_name}" -f /home/${site_name}/.ssh/id_rsa
+	chmod 0600 /home/${site_name}/.ssh/id_rsa
+	ssh-keygen -t dsa -N "${site_name}" -f /home/${site_name}/.ssh/id_dsa	
+	chmod 0600 /home/${site_name}/.ssh/id_dsa
+	echo  "<?php phpinfo();" > /home/${site_name}/httpdocs/web/index.php
+	php -r 'echo "admin:" . crypt("${authpassword}", "salt") . ": Web auth for ${site_name}";' > /home/${site_name}/authfile
+	chown ${site_name}:www-data -R /home/${site_name}
 
-    query="SHOW databases;"
+	#service php5-fpm stop
+	#service apache2 stop
 
-    local default_databases_exclude=(
-    'information_schema'
-    'performance_schema'
-    )
+	if [ $APACHE -eq 1 ]; then
+echo "
+<VirtualHost 127.0.0.1:8080>
+		ServerName ${site_name}
+		ServerAlias www.${site_name}
+		ServerAdmin info@reklamu.ru
+		DocumentRoot /home/${site_name}/httpdocs/web
+		<Directory /home/${site_name}/httpdocs/web>
+				Options Indexes FollowSymLinks MultiViews
+				Options FollowSymLinks
+				AllowOverride All
+				Options +ExecCGI -MultiViews +SymLinksIfOwnerMatch
+				Order allow,deny
+				Allow from all
+		</Directory>
 
-    local array_views=()
+		ErrorLog \${APACHE_LOG_DIR}/${site_name}-error.log
 
-    database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
-    database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
-    f_log "Exclude databases: $database_exclude_expression"
+		# Possible values include: debug, info, notice, warn, error, crit,
+		# alert, emerg.
+		LogLevel warn
 
-    for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
-	
-				touch $DST/$BDD/error.log
+		CustomLog \${APACHE_LOG_DIR}/${site_name}-access.log combined
+</VirtualHost>
+" > /etc/apache2/sites-enabled/${site_name}.conf
 
-        mkdir -p $DST/$BDD 2>/dev/null 1>&2
-        chown $USER:$GROUP $DST/$BDD
-        chmod $DIRECTORYATTRIBUTES $DST/$BDD
+main="
+				# Apache back-end
+				location / {
+						proxy_pass  http://127.0.0.1:8080;
+						proxy_ignore_headers   Expires Cache-Control;
+						proxy_set_header        Host            \$host;
+						proxy_set_header        X-Real-IP       \$remote_addr;
+						proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}				
+				location ~* \.(js|css|png|jpg|jpeg|gif|ico|swf)\$ {
+						expires 1y;
+						log_not_found off;
+						proxy_pass  http://127.0.0.1:8080;
+						proxy_ignore_headers   Expires Cache-Control;
+						proxy_set_header        Host            \$host;
+						proxy_set_header        X-Real-IP       \$remote_addr;
+						proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
+				location ~* \.(html|htm)\$ {
+						expires 1h;
+						proxy_pass  http://127.0.0.1:8080;
+						proxy_ignore_headers   Expires Cache-Control;
+						proxy_set_header        Host            \$host;
+						proxy_set_header        X-Real-IP       \$remote_addr;
+						proxy_set_header        X-Forwarded-For \$proxy_add_x_forwarded_for;
+				}
+"		
+	else
+echo "## php-fpm config for ${site_name}
+[${site_name}]
 
-        query="SHOW CREATE DATABASE \`$BDD\`;"
-        mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
-        if [ -f $DST/$BDD/__create.sql ]; then
-            f_log "  > Export create"
-        fi
+user = ${site_name}
+group = www-data
 
-        query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-        for viewName in $(mysql --defaults-extra-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-            mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $DST/$BDD/__views.sql 2>> $DST/$BDD/error.log
-            array_views+=($viewName)
-        done		
-        if [ -f $DST/$BDD/__views.sql ]; then
-            f_log "  > Exports views"
-        fi
+listen = /var/run/php-fpm-${site_name}.sock
+listen.mode = 0666
 
-        mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
-        if [ -f $DST/$BDD/__routines.sql ]; then
-            f_log "  > Exports Routines"
-        fi
+pm = dynamic
+pm.max_children = 250
+pm.start_servers = 8
+pm.min_spare_servers = 8
+pm.max_spare_servers = 16
 
-        local default_tables_exclude=(
-        'slow_log'
-        'general_log'
-        )
-
-        tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
-        tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
-        f_log "Exclude tables: $tables_exclude_expression"		
-
-        data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
-        data_tables_exclude_expression=`prepaire_skip_expression "${data_tables_exclude[@]}"`
-        f_log "Exclude data tables: $data_tables_exclude_expression"
+chdir = /
+security.limit_extensions = false
+php_flag[display_errors] = on
+php_admin_value[error_log] = /home/${site_name}/logs/fpm-php.${site_name}.log
+php_admin_flag[log_errors] = on
+" > /etc/php5/fpm/pool.d/${site_name}.conf
 		
-        query="SHOW TABLES;"
-        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
-            f_log "  ** Dump $BDD.$TABLE"
-
-            if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
-                f_log "Exclude data from table $TABLE"
-                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-            else
-                mysqldump --defaults-file=$CONFIG_FILE --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-            fi            
-
-            if [ -f "$DST/$BDD/$TABLE.sql" ]; then
-                chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
-                chown $USER:$GROUP $DST/$BDD/$TABLE.sql
-                f_log "  ** set perm on $BDD/$TABLE.sql"
-            else
-                f_log "  ** WARNING : $DST/$BDD/$TABLE.sql not found"
-            fi
-
-            if [ -f "$DST/$BDD/$TABLE.txt" ]; then
-
-                if [ $COMPRESS ]; then
-
-                    f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
-
-                    if [ $COMPRESS == 'bzip2' ]; then
-					
-												if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-													rm $DST/$BDD/$TABLE.txt.bz2
-												fi					
-					
-                        ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2) &
+main="
+				# With PHP-FPM
+				location / {
+						index index.php;
+						#auth_basic \"Website development\"; 
+						#auth_basic_user_file /home/${site_name}/authfile;
+						try_files \$uri \$uri/ /index.php?\$query_string;
+				}
+				
+				# PHP fastcgi
+				location ~ \.php {
+						#try_files \$uri =404;
+						include fastcgi_params;
+						# Use your own port of fastcgi here
+						#fastcgi_pass 127.0.0.1:9000;
 						
-                    elif [ $COMPRESS == 'gzip' ]; then
-					
-												if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-													rm $DST/$BDD/$TABLE.txt.gz
-												fi					
-					
-                        ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz) &
-						
-                    fi
+						fastcgi_pass unix:/var/run/php-fpm-${site_name}.sock;
+						fastcgi_index index.php;
+						fastcgi_split_path_info ^(.+\.php)(/.+)$;
+						fastcgi_param PATH_INFO \$fastcgi_path_info;
+						fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
+				}				
+"
+	fi
 
-                fi
+awstats="# Awstats
+server {
+				listen ${site_addr};
+				server_name  awstats.${site_name};
+				
+				auth_basic            \"Restricted\";
+				auth_basic_user_file  /home/${site_name}/authfile;
 
-            else
-                f_log "  ** WARNING : $DST/$BDD/$TABLE.txt not found"
-            fi
+				access_log /var/log/nginx/access.awstats.${site_name}.log;
+				error_log /var/log/nginx/error.awstats.${site_name}.log;                
 
-        done
+				location / {
+						root   /home/${site_name}/awstats/;
+						index  awstats.html;
+						access_log off;
+				}
 
-    done
+				location  /awstats-icon/ {
+						alias  /usr/share/awstats/icon/;
+						access_log off;
+				}
+				
+				# apt-get install 
+				location ~ ^/cgi-bin {
+						access_log off;
+						fastcgi_pass   unix:/var/run/fcgiwrap.socket;
+						include /etc/nginx/fastcgi_params;
+						fastcgi_param  SCRIPT_FILENAME  /usr/lib\$fastcgi_script_name;
+				}
+}
+"
 
-    f_log " END "
+echo "
+${awstats}
+
+# Rerirect www.${site_name}
+server {
+				listen ${site_addr};
+				server_name ${site_name};
+				return 301 http://www.${site_name}\$request_uri;
+}
+
+# Site www.${site_name}
+server {
+				listen ${site_addr};
+				server_name www.${site_name};
+				root /home/${site_name}/httpdocs/web;
+				index index.php;
+				access_log /home/${site_name}/logs/access.log;
+				error_log  /home/${site_name}/logs/error.log error;
+				charset utf-8;
+				#charset        windows-1251;
+				location = /favicon.ico {
+						log_not_found off;
+						access_log off;
+						break;
+				}
+				location = /robots.txt {
+						allow all;
+						log_not_found off;
+						access_log off;
+				}					
+				${main}					
+				location ~ /(protected|themes/\w+/views)/ {
+						access_log off;
+						log_not_found off;
+						return 404;
+				}
+				#
+				location ~ \.(xml)\$ {
+						expires 24h;
+						charset windows-1251;
+						#log_not_found off;
+						#try_files \$uri =404;
+						#try_files \$uri \$uri/ /index.php?\$query_string;
+				}
+				# 
+				location ~ \.(js|css|png|jpg|gif|swf|ico|pdf|mov|fla|zip|rar)\$ {
+						expires 24h;
+						#log_not_found off;
+						#try_files \$uri =404;
+						try_files \$uri \$uri/ /index.php?\$query_string;
+				}
+
+				# Hide all system files
+				location  ~ /\. {
+						deny  all;
+						access_log off;
+						log_not_found off;
+				}
+}
+" > /etc/nginx/conf.d/${site_name}.conf
+
+	service php5-fpm reload
+	service apache2 reload
+	service nginx reload
+	
+	echo ""
+	echo "--------------------------------------------------------"
+	echo "User:"
+	echo "Login: ${site_name}"
+	echo "Password: ${password}"
+	echo "Path: /home/${site_name}/"
+	echo "SSH Private file: /home/${site_name}/.ssh/id_rsa"
+	echo "SSH Public file: /home/${site_name}/.ssh/id_rsa.pub"
+	echo "Server:"
+	echo "Site root: /home/${site_name}/httpdocs/web"
+	echo "Site logs path: /home/${site_name}/logs"
+	if [ $APACHE -eq 1 ]; then
+		echo "Back-end server: Apache 2"
+		echo "/etc/apache2/sites-enabled/${site_name}.conf"
+	else
+		echo "Back-end server: PHP-FPM"
+	fi
+	echo "Web auth: admin ${authpassword}"
+	echo "Statistic:"
+	echo "awstats.${site_name}"
+	echo "Add crontab task: */20 * * * * /usr/lib/cgi-bin/awstats.pl -config=${site_name} -update > /dev/null"
+	echo "--------------------------------------------------------"
+	echo ""
+
 }
 
 usage()
 {
-    cat << EOF
-    
-        This mysql backup engine.
-    
-        Usage:  $0 <[options]> or bash $0 <[options]>
+cat << EOF
+usage: $0 options
 
-Options:
-   -e= | --exclude=                     Exclude databases
-   --exclude-tables=                    Exclude tables
-   --exclude-data-tables=               Exclude data tables
-   -c= | --compress=                    Compress with gzip or bzip2
-   -v  | --verbose                      Add verbose into output
-   -l  | --lifetime=                    Lifetime for dump files
-   --config=                            Config file of Debian format
-   --dir=                               Backup directory
-   -h  | --help                         This text
+This script create settings files for nginx, php-fpm, apache2.
 
-Examples:
-        backup.sh --verbose --compress=
-        backup.sh --verbose --compress=gzip
-        backup.sh --verbose --compress=bzip2
-        backup.sh --verbose --compress= --exclude="mysql"
-        backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
-        backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-				
-				
+OPTIONS:
+   -n | --host      Host name
+   -i | --ip        IP address, default usage 80
+   -a | --apache    Usage apache back-end
+   -h | --help      Usage
+
+
 EOF
 }
 
 if [ $# = 0 ]; then
-    usage;
-    exit;
+    usage
+    exit
 fi
 
-EXCLUDE_DATABASES=''
-EXCLUDE_TABLES=''
-EXCLUDE_DATA_TABLES=''
-BIN_DEPS="mysql mysqldump $COMPRESS"
-
-# === CHECKS ===
-for BIN in $BIN_DEPS; do
-    which $BIN 1>/dev/null 2>&1
-    if [ $? -ne 0 ]; then
-        echo "Error: Required command file not be found: $BIN"
-        exit 1
-    fi
-done
-
-if [ -f '/etc/debian_version' ]; then
-    CONFIG_FILE='/etc/mysql/debian.cnf'
-else
-    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
-fi
+HOST=''
+IP='80'
+APACHE=0
 
 for i in "$@"
 do
     case $i in
-        -e=* | --exclude=*)
-            EXCLUDE_DATABASES=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --exclude-tables=*)
-            EXCLUDE_TABLES=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --exclude-data-tables=*)
-            EXCLUDE_DATA_TABLES=( "${i#*=}" )
-            shift # past argument=value
-        ;;		
-        -c=* | --compress=*)
-            COMPRESS=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        -l=* | --lifetime=*)
-            TIME_REMOVED_DUMP_FILES=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --dir=*)
-            BACKUP_DIR=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --config=*)
-            CONFIG_FILE=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        -v | --verbose)
-            VERBOSE=1
-            shift # past argument=value
-        ;;
-        -h | --help)
-            usage
-            exit
-        ;;
-        *)
-        # unknown option
-        ;;
+	-n=* | --host=*)
+	    HOST=( "${i#*=}" )
+	    shift
+	;;
+	-i=* | --ip=*)
+	    IP=( "${i#*=}" )
+		$IP="${IP}:80"
+	    shift
+	;;	
+	-a | --apache)
+	    APACHE=1
+	    shift
+	;;       
+	-h | --help)
+		usage
+		exit
+	;;
+	*)
+	# unknown option
+	;;
     esac
 done
 
-DATE=`date '+%Y.%m.%d'`
-DATEOLD=`date --date="$TIME_REMOVED_DUMP_FILES" +%Y.%m.%d`
-DST=$BACKUP_DIR/$DATE
-DSTOLD=$BACKUP_DIR/$DATEOLD
-
-if [ ! -d "$DST" ]; then
-    mkdir -p $DST;
-    chmod $DIRECTORYATTRIBUTES $DST;
-    chown $USER:$GROUP $DST;
-fi
-
-if [ -d "$DSTOLD" ]; then
-    rm -fr $DSTOLD;
-fi
-
-# === SETTINGS ===
-f_log "============================================"
-f_log "Dump into: $BACKUP_DIR"
-f_log "Config file: $CONFIG_FILE"
-f_log "Verbose: $VERBOSE"
-f_log "Compress: $COMPRESS"
-f_log "Exclude databases: $EXCLUDE_DATABASES"
-f_log "Exclude tables: $EXCLUDE_TABLES"
-f_log "Life time: $TIME_REMOVED_DUMP_FILES"
-f_log "============================================"
-f_log ""
-
 # === AUTORUN ===
-backup
+create_site
