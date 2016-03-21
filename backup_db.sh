@@ -111,7 +111,7 @@ backup()
 			f_log "Exclude data from table $TABLE"
 			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
-			mysqldump --defaults-file=$CONFIG_FILE --add-drop-table --quick  --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+			mysqldump --defaults-file=$CONFIG_FILE --default-character-set=utf8 --add-drop-table --quick  --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		fi            
 
 		if [ -f "$DST/$DATABASE/$TABLE.sql" ]; then
