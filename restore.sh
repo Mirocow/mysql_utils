@@ -113,23 +113,17 @@ restore()
 					fi
 					
 					if [ -s "$DIR/$BDD/$TABLE.txt" ]; then
-						
-						if [ ! -z "$(cat $DIR/$BDD/$TABLE.sql | grep -i 'DEFAULT CHARSET=CP1251')" ]; then
-							charset='cp1251'
-						else
-							charset='utf8'
-						fi	
-					
-						f_log "+ $TABLE, Set default charset: $charset"
+
+						f_log "+ $TABLE"					
 						
 						split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" "$DIR/$BDD/${TABLE}_part_"
 						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
 							f_log "Restore from $segment"
-								mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-								SET character_set_database = $charset;
-								LOAD DATA LOCAL INFILE '$segment'
-								INTO TABLE $TABLE;
-								SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+							mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+							SET character_set_filesystem=utf8;
+							LOAD DATA LOCAL INFILE '$segment'
+							INTO TABLE $TABLE;
+							SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
 								
 							if [ -f "$segment" ]; then
 								f_log "Delete segment $segment"

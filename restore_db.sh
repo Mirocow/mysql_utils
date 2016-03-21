@@ -68,47 +68,41 @@ restore()
           bunzip2 -k $DIR/$TABLE.txt.bz2
       fi
 
-      if [ -s "$DIR/$TABLE.txt" ]; then
-				
-				if [ ! -z "$(cat $DIR/$BDD/$TABLE.sql | grep -i 'DEFAULT CHARSET=CP1251')" ]; then
-					charset='cp1251'
-				else
-					charset='utf8'
-				fi				
-				
-        f_log "+ $TABLE, Set default charset: $charset"
+      if [ -s "$DIR/$TABLE.txt" ]; then				
+
+		f_log "+ $TABLE"						
         
-				split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
-				for segment in "$DIR/${TABLE}"_part_*; do
-					f_log "Restore from $segment"
-					time mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
-					  SET character_set_database = $charset;
-						LOAD DATA LOCAL INFILE '$segment'
-						INTO TABLE $TABLE;
-						SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
-			
-					if [ -f "$segment" ]; then
-						f_log "Delete segment $segment"
-						rm "$segment"
-					fi			
-				done
+		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
+		for segment in "$DIR/${TABLE}"_part_*; do
+			f_log "Restore from $segment"
+			mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+			SET character_set_database=utf8;
+			LOAD DATA LOCAL INFILE '$segment'
+			INTO TABLE $TABLE;
+			SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
 	
-				if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
-					f_log "Delete source file: $TABLE.txt"
-					rm $DIR/$TABLE.txt
-				fi
+			if [ -f "$segment" ]; then
+				f_log "Delete segment $segment"
+				rm "$segment"
+			fi			
+		done
+
+		if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
+			f_log "Delete source file: $TABLE.txt"
+			rm $DIR/$TABLE.txt
+		fi
 						
-		  fi
-			
-			if [ $DATABASES_TABLE_CHECK ]; then
-				if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
-					if [ ! $(innochecksum $DIR/$TABLE.ibd) ]; then
-						f_log "$TABLE [OK]"
-					else
-						f_log "$TABLE [ERR]"
-					fi
+	  fi
+		
+		if [ $DATABASES_TABLE_CHECK ]; then
+			if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
+				if [ ! $(innochecksum $DIR/$TABLE.ibd) ]; then
+					f_log "$TABLE [OK]"
+				else
+					f_log "$TABLE [ERR]"
 				fi
 			fi
+		fi
 			
     done
 
