@@ -111,7 +111,7 @@ backup()
                 f_log "Exclude data from table $TABLE"
                 mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
             else
-                mysqldump --defaults-file=$CONFIG_FILE --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+                mysqldump --defaults-file=$CONFIG_FILE --default-character-set=utf8 --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
             fi            
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
@@ -130,17 +130,17 @@ backup()
 
                     if [ $COMPRESS == 'bzip2' ]; then
 					
-												if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-													rm $DST/$BDD/$TABLE.txt.bz2
-												fi					
+			if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+				rm $DST/$BDD/$TABLE.txt.bz2
+			fi					
 					
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2) &
 						
                     elif [ $COMPRESS == 'gzip' ]; then
 					
-												if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-													rm $DST/$BDD/$TABLE.txt.gz
-												fi					
+			if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+				rm $DST/$BDD/$TABLE.txt.gz
+			fi					
 					
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz) &
 						
