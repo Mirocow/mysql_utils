@@ -268,7 +268,7 @@ fi
 
 # === SETTINGS ===
 f_log "============================================"
-f_log "Dump into: $BACKUP_DIR"
+f_log "Dump into: $DST"
 f_log "Config file: $CONFIG_FILE"
 f_log "Verbose: $VERBOSE"
 f_log "Compress: $COMPRESS"
