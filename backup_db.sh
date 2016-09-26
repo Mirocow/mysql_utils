@@ -96,16 +96,33 @@ backup()
 	)
 
 	tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
-	tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
+	tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
 	f_log "Exclude tables: $tables_exclude_expression"		
 
 	data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
-	data_tables_exclude_expression=`prepaire_skip_expression "${data_tables_exclude[@]}"`
+	data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
 	f_log "Exclude data tables: $data_tables_exclude_expression"
+
+	tables=( ${TABLES[@]} )
+	tables_expression=$(prepaire_skip_expression "${tables[@]}")
+	f_log "Only tables: $tables_expression"
 	
 	query="SHOW TABLES;"
-	for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e "$query" | egrep -v "$tables_exclude_expression"); do
-		f_log "  ** Dump $DATABASE.$TABLE"
+	command="mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
+	
+	if [ $tables_exclude_expression ]; then
+		command=" $command | egrep -v \"$tables_exclude_expression\""
+	fi
+
+	if [ $tables_expression ]; then
+		command=" $command | egrep \"$tables_expression\""
+	fi
+	
+	f_log "Command: $command"
+	
+	for TABLE in $(eval $command); do
+	
+		f_log " ** Dump $DATABASE.$TABLE"
 
 		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
 			f_log "Exclude data from table $TABLE"
@@ -166,6 +183,7 @@ usage()
         Usage:  $0 <[database-name]> <[options]> or bash $0 <[database-name]> <[options]>
 
 Options:
+   --tables=                            Dump only such tables
    --exclude-tables=                    Exclude tables
    --exclude-data-tables=               Exclude data tables
    -c= | --compress=                    Compress with gzip or bzip2
@@ -185,7 +203,7 @@ Examples:
         backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-				
+        backup.sh --verbose --dir="/home/backups/mysql" --tables="tbl_template tbl_template1 tbl_template2"
 				
 EOF
 }
@@ -196,6 +214,7 @@ if [ $# = 0 ]; then
 fi
 
 DATABASE=''
+TABLES=''
 EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
 BIN_DEPS="mysql mysqldump $COMPRESS"
@@ -213,6 +232,10 @@ done
 for i in "$@"
 do
     case $i in	
+        -t=* | --tables=*)
+            TABLES=( "${i#*=}" )
+            shift # past argument=value
+        ;;	
         --exclude-tables=*)
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
@@ -273,6 +296,7 @@ f_log "Config file: $CONFIG_FILE"
 f_log "Verbose: $VERBOSE"
 f_log "Compress: $COMPRESS"
 f_log "Database: $DATABASE"
+f_log "Tables: $TABLES"
 f_log "Exclude tables: $EXCLUDE_TABLES"
 f_log "Life time: $TIME_REMOVED_DUMP_FILES"
 f_log "============================================"
