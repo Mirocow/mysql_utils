@@ -111,8 +111,15 @@ backup()
                 f_log "Exclude data from table $TABLE"
                 mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
             else
-                mysqldump --defaults-file=$CONFIG_FILE --default-character-set=utf8 --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-            fi            
+                # If fields has geospatial types			
+                checkGeo="mysql --defaults-extra-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+                hasGeo=$(eval $checkGeo)
+                if [ ! -z "$hasGeo" ]; then				
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick  --result-file=$DST/$BDD/$TABLE.sql $BDD $TABLE 2>> $DST/$BDD/error.log
+		else
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+		fi
+            fi           
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.sql
