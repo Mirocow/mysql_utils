@@ -87,7 +87,7 @@ restore()
 			fi			
 		done
 
-		if [ ! -f "$DIR/$TABLE.txt.bz2" ]; then
+		if [ -f "$DIR/$TABLE.txt" ]; then
 			f_log "Delete source file: $TABLE.txt"
 			rm $DIR/$TABLE.txt
 		fi
