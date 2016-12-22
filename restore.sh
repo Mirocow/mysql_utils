@@ -11,7 +11,7 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 # === FUNCTIONS ===
 database_exists()
 {
-	RESULT=`mysqlshow --defaults-extra-file=$CONFIG_FILE $@| grep -v Wildcard | grep -o $@`
+	RESULT=`mysqlshow --defaults-file=$CONFIG_FILE $@| grep -v Wildcard | grep -o $@`
 	if [ "$RESULT" == "$@" ]; then
 			echo YES
 	else
@@ -82,7 +82,7 @@ restore()
 		
 			if [ -f $DIR/$BDD/__create.sql ]; then
 				f_log "Create database $BDD"
-				mysql --defaults-extra-file=$CONFIG_FILE < $DIR/$BDD/__create.sql 2>/dev/null
+				mysql --defaults-file=$CONFIG_FILE < $DIR/$BDD/__create.sql 2>/dev/null
 			fi
 			
 			if [ $(database_exists $BDD) != "YES" ]; then
@@ -94,7 +94,7 @@ restore()
 				f_log "Create tables in $BDD"
 				for TABLE in $tables; do							
 					f_log "Create table: $BDD/$TABLE"
-					mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+					mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
 						DROP TABLE IF EXISTS $TABLE;
 						SOURCE $DIR/$BDD/$TABLE.sql;
 						SET foreign_key_checks = 1;"
@@ -119,7 +119,7 @@ restore()
 						split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" "$DIR/$BDD/${TABLE}_part_"
 						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
 							f_log "Restore from $segment"
-							mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+							mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 							SET character_set_database=utf8;
 							LOAD DATA LOCAL INFILE '$segment'
 							INTO TABLE $TABLE;
@@ -152,12 +152,12 @@ restore()
 				
 				if [ -f "$DIR/$BDD/__routines.sql" ]; then
 						f_log "Import routines into $BDD"
-						mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/$BDD/__routines.sql 2>/dev/null
+						mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/$BDD/__routines.sql 2>/dev/null
 				fi
 				
 				if [ -f "$DIR/$BDD/__views.sql" ]; then
 						f_log "Import views into $BDD"
-						mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/$BDD/__views.sql 2>/dev/null
+						mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/$BDD/__views.sql 2>/dev/null
 				fi
 				
 			fi
@@ -165,7 +165,7 @@ restore()
 	done
 
 	f_log "Flush privileges;"
-	mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
+	mysql --defaults-file=$CONFIG_FILE -e "flush privileges;"
 
 	f_log "** END **"
 }
