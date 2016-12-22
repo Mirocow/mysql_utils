@@ -71,13 +71,13 @@ backup()
 	chmod $DIRECTORYATTRIBUTES $DST/$DATABASE
 
 	query="SHOW CREATE DATABASE \`$DATABASE\`;"
-	mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$DATABASE/__create.sql
+	mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$DATABASE/__create.sql
 	if [ -f $DST/$DATABASE/__create.sql ]; then
 		f_log "  > Export create"
 	fi
 
 	query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-	for viewName in $(mysql --defaults-extra-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
+	for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
 		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName >> $DST/$DATABASE/__views.sql 2>> $DST/$DATABASE/error.log
 		array_views+=($viewName)
 	done		
@@ -108,7 +108,7 @@ backup()
 	f_log "Only tables: $tables_expression"
 	
 	query="SHOW TABLES;"
-	command="mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
+	command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
 	
 	if [ $tables_exclude_expression ]; then
 		command=" $command | egrep -v \"$tables_exclude_expression\""
@@ -129,7 +129,7 @@ backup()
 			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
 			# If fields has geospatial types			
-			checkGeo="mysql --defaults-extra-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
 			hasGeo=$(eval $checkGeo)
 			if [ ! -z "$hasGeo" ]; then
 				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
