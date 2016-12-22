@@ -62,7 +62,7 @@ backup()
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
     f_log "Exclude databases: $database_exclude_expression"
 
-    for BDD in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
+    for BDD in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
 	
 				touch $DST/$BDD/error.log
 
@@ -71,13 +71,13 @@ backup()
         chmod $DIRECTORYATTRIBUTES $DST/$BDD
 
         query="SHOW CREATE DATABASE \`$BDD\`;"
-        mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
         if [ -f $DST/$BDD/__create.sql ]; then
             f_log "  > Export create"
         fi
 
         query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-        for viewName in $(mysql --defaults-extra-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
+        for viewName in $(mysql --defaults-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
             mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $DST/$BDD/__views.sql 2>> $DST/$BDD/error.log
             array_views+=($viewName)
         done		
@@ -104,7 +104,7 @@ backup()
         f_log "Exclude data tables: $data_tables_exclude_expression"
 		
         query="SHOW TABLES;"
-        for TABLE in $(mysql --defaults-extra-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
+        for TABLE in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $BDD.$TABLE"
 
             if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
@@ -112,7 +112,7 @@ backup()
                 mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
             else
                 # If fields has geospatial types			
-                checkGeo="mysql --defaults-extra-file=$CONFIG_FILE -B $BDD -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+                checkGeo="mysql --defaults-file=$CONFIG_FILE -B $BDD -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
                 hasGeo=$(eval $checkGeo)
                 if [ ! -z "$hasGeo" ]; then				
                     mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick  --result-file=$DST/$BDD/$TABLE.sql $BDD $TABLE 2>> $DST/$BDD/error.log
