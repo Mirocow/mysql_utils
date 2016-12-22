@@ -41,7 +41,7 @@ restore()
 
     if [ -f $DIR/__create.sql ]; then
       f_log "Create database $BDD"
-      mysql --defaults-extra-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
+      mysql --defaults-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
     fi
 
     tables=$(ls -1 $DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
@@ -49,7 +49,7 @@ restore()
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
       f_log "Create table: $BDD/$TABLE"
-      mysql --defaults-extra-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+      mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
                       DROP TABLE IF EXISTS $TABLE;
                       SOURCE $DIR/$TABLE.sql;
                       SET foreign_key_checks = 1;"
@@ -75,7 +75,7 @@ restore()
 		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
 		for segment in "$DIR/${TABLE}"_part_*; do
 			f_log "Restore from $segment"
-			mysql --defaults-extra-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+			mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
 			SET character_set_database=utf8;
 			LOAD DATA LOCAL INFILE '$segment'
 			INTO TABLE $TABLE;
@@ -108,16 +108,16 @@ restore()
 
     if [ -f "$DIR/__routines.sql" ]; then
       f_log "Import routines into $BDD"
-      mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
+      mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
     fi
 
     if [ -f "$DIR/__views.sql" ]; then
       f_log "Import views into $BDD"
-      mysql --defaults-extra-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
+      mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
-    mysql --defaults-extra-file=$CONFIG_FILE -e "flush privileges;"
+    mysql --defaults-file=$CONFIG_FILE -e "flush privileges;"
 
     f_log "** END **"
 
@@ -201,4 +201,3 @@ f_log ""
 
 # === AUTORUN ===
 restore $BACKUP_DIR
-
