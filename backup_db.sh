@@ -62,13 +62,12 @@ backup()
 	'performance_schema'
     )
 
-    local array_views=()
-
-	touch $DST/$DATABASE/error.log
+    local array_views=()	
 
 	mkdir -p $DST/$DATABASE 2>/dev/null 1>&2
 	chown $USER:$GROUP $DST/$DATABASE
 	chmod $DIRECTORYATTRIBUTES $DST/$DATABASE
+	touch $DST/$DATABASE/error.log
 
 	query="SHOW CREATE DATABASE \`$DATABASE\`;"
 	mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$DATABASE/__create.sql
