@@ -62,13 +62,12 @@ backup()
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
     f_log "Exclude databases: $database_exclude_expression"
 
-    for BDD in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do
-	
-				touch $DST/$BDD/error.log
+    for BDD in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do				
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
         chmod $DIRECTORYATTRIBUTES $DST/$BDD
+	touch $DST/$BDD/error.log
 
         query="SHOW CREATE DATABASE \`$BDD\`;"
         mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
