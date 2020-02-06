@@ -75,11 +75,16 @@ restore()
 		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
 		for segment in "$DIR/${TABLE}"_part_*; do
 			f_log "Restore from $segment"
-			mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "SET foreign_key_checks = 0; SET unique_checks = 0; SET sql_log_bin = 0;
+			mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
+			SET foreign_key_checks = 0; 
+			SET unique_checks = 0; 
+			SET sql_log_bin = 0;
+			SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
 			SET character_set_database=utf8;
-			LOAD DATA LOCAL INFILE '$segment'
-			INTO TABLE $TABLE;
-			SET foreign_key_checks = 1; SET unique_checks = 1; SET sql_log_bin = 1;"
+			LOAD DATA LOCAL INFILE '$segment' INTO TABLE $TABLE;
+			SET foreign_key_checks = 1; 
+			SET unique_checks = 1; 
+			SET sql_log_bin = 1;"			
 	
 			if [ -f "$segment" ]; then
 				f_log "Delete segment $segment"
