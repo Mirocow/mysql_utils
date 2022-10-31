@@ -42,6 +42,7 @@ prepaire_skip_expression()
             return="$return|^$skip\$"
         fi
     done
+
     echo ${return}
 }
 
@@ -52,8 +53,8 @@ backup()
     query="SHOW databases;"
 
     local default_databases_exclude=(
-    'information_schema'
-    'performance_schema'
+        'information_schema'
+        'performance_schema'
     )
 
     local array_views=()
@@ -62,12 +63,16 @@ backup()
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
     f_log "Exclude databases: $database_exclude_expression"
 
-    for BDD in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression"); do				
+    if [ ${#DATABASES[@]} -eq 0 ]; then
+        DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
+    fi
+
+    for BDD in $DATABASES; do				
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
         chmod $DIRECTORYATTRIBUTES $DST/$BDD
-	touch $DST/$BDD/error.log
+        touch $DST/$BDD/error.log
 
         query="SHOW CREATE DATABASE \`$BDD\`;"
         mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$BDD/__create.sql
@@ -90,8 +95,8 @@ backup()
         fi
 
         local default_tables_exclude=(
-        'slow_log'
-        'general_log'
+            'slow_log'
+            'general_log'
         )
 
         tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
@@ -188,7 +193,8 @@ Examples:
         backup.sh --verbose --compress=
         backup.sh --verbose --compress=gzip
         backup.sh --verbose --compress=bzip2
-        backup.sh --verbose --compress= --exclude="mysql"
+        backup.sh --verbose --compress= --include="mydb"
+        backup.sh --verbose --compress= --exclude="mysql sys"
         backup.sh --verbose --compress= --exclude="mysql" --lifetime="3 day ago"
         backup.sh --verbose --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
@@ -204,6 +210,7 @@ if [ $# = 0 ]; then
     exit;
 fi
 
+INCLUDE_DATABASES=''
 EXCLUDE_DATABASES=''
 EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
@@ -231,6 +238,10 @@ do
             EXCLUDE_DATABASES=( "${i#*=}" )
             shift # past argument=value
         ;;
+        -i=* | --include=*)
+            DATABASES=( "${i#*=}" )            
+            shift # past argument=value
+        ;;        
         --exclude-tables=*)
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
@@ -290,6 +301,7 @@ f_log "Dump into: $DST"
 f_log "Config file: $CONFIG_FILE"
 f_log "Verbose: $VERBOSE"
 f_log "Compress: $COMPRESS"
+f_log "Only include databases: $DATABASES"
 f_log "Exclude databases: $EXCLUDE_DATABASES"
 f_log "Exclude tables: $EXCLUDE_TABLES"
 f_log "Life time: $TIME_REMOVED_DUMP_FILES"
