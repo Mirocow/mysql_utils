@@ -62,21 +62,25 @@ restore()
 
 		BDD=$(basename $i)
 		
-		for skip in "${DATABASES_SKIP[@]}"; do
-			if [ $BDD = $skip ]; then
-				f_log "Skip database $BDD"
-				unset BDD
-				break
-			fi								
-		done
+		if [ ${#DATABASES_SELECTED[@]} -eq 0 ]; then
+			for select in "${DATABASES_SELECTED[@]}"; do
+				if [ $BDD != $select ]; then
+					f_log "Skip database $BDD"
+					unset BDD
+					break
+				fi								
+			done
+		fi		
 		
-		for select in "${DATABASES_SELECTED[@]}"; do
-			if [ $BDD != $select ]; then
-				f_log "Skip database $BDD"
-				unset BDD
-				break
-			fi								
-		done
+		if [ ${#DATABASES_SKIP[@]} -eq 0 ]; then
+			for skip in "${DATABASES_SKIP[@]}"; do
+				if [ $BDD = $skip ]; then
+					f_log "Skip database $BDD"
+					unset BDD
+					break
+				fi								
+			done
+		fi
 	
 		if [ $BDD ]; then
 		
@@ -101,21 +105,20 @@ restore()
 				done
 				
 				f_log "Import data into $BDD"		
-				for TABLE in $tables; do									
+				for TABLE in $tables; do
 					f_log "Import data into $BDD/$TABLE"
 						
 					if [ -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
 						f_log "< $TABLE"
 						if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
+						    f_log "Delete source: $TABLE.txt"
 							rm $DIR/$BDD/$TABLE.txt
 						fi
 						bunzip2 -k $DIR/$BDD/$TABLE.txt.bz2
 					fi
 					
 					if [ -s "$DIR/$BDD/$TABLE.txt" ]; then
-
-						f_log "+ $TABLE"					
-						
+						f_log "+ $TABLE"											
 						split -l $CONFIG_CHUNK "$DIR/$BDD/$TABLE.txt" "$DIR/$BDD/${TABLE}_part_"
 						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
 							f_log "Restore from $segment"
@@ -136,11 +139,6 @@ restore()
 							fi								
 						done
 						
-					fi
-					
-					if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
-						f_log "Delete source: $TABLE.txt"
-						rm $DIR/$BDD/$TABLE.txt
 					fi					
 					
 					if [ $DATABASES_TABLE_CHECK ]; then
