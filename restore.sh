@@ -62,7 +62,7 @@ restore()
 
 		BDD=$(basename $i)
 		
-		if [ ${#DATABASES_SELECTED[@]} -eq 0 ]; then
+		if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
 			for select in "${DATABASES_SELECTED[@]}"; do
 				if [ $BDD != $select ]; then
 					f_log "Skip database $BDD"
@@ -72,7 +72,7 @@ restore()
 			done
 		fi		
 		
-		if [ ${#DATABASES_SKIP[@]} -eq 0 ]; then
+		if [ ${#DATABASES_SKIP[@]} -ne 0 ]; then
 			for skip in "${DATABASES_SKIP[@]}"; do
 				if [ $BDD = $skip ]; then
 					f_log "Skip database $BDD"
