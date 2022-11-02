@@ -19,6 +19,17 @@ database_exists()
 	fi
 }
 
+contains () 
+{ 
+    param=$1;
+    shift;
+    for elem in "$@";
+    do
+        [[ "$param" = "$elem" ]] && return 0;
+    done;
+    return 1
+}
+
 f_log() 
 {
     local bold=$(tput bold)
@@ -66,13 +77,10 @@ restore()
 		BDD=$(basename $i)
 		
 		if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
-			for selected in "${DATABASES_SELECTED[@]}"; do		
-				if [ $BDD != $selected ]; then
-					f_log "Skip database $BDD"
-					unset BDD
-					break
-				fi								
-			done
+			if ! contains $BDD "${DATABASES_SELECTED[@]}"; then
+				f_log "Skip database $BDD"
+				unset BDD
+			fi
 		fi
 
 		if [ ${#DATABASES_SKIP[@]} -ne 0 ]; then
