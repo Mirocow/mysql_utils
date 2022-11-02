@@ -101,9 +101,9 @@ restore()
 				for TABLE in $tables; do							
 					f_log "Create table: $BDD/$TABLE"
 					mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
-						DROP TABLE IF EXISTS $TABLE;
-						SOURCE $DIR/$BDD/$TABLE.sql;
-						SET foreign_key_checks = 1;"
+					DROP TABLE IF EXISTS $TABLE;
+					SOURCE $DIR/$BDD/$TABLE.sql;
+					SET foreign_key_checks = 1;"
 				done
 				
 				f_log "Import data into $BDD"		
@@ -113,8 +113,8 @@ restore()
 					if [ -f "$DIR/$BDD/$TABLE.txt.bz2" ]; then
 						f_log "< $TABLE"
 						if [ -f "$DIR/$BDD/$TABLE.txt" ]; then
-						    f_log "Delete source: $TABLE.txt"
-							rm $DIR/$BDD/$TABLE.txt
+						    f_log "Delete source file: $DIR/$TABLE.txt"
+						    rm $DIR/$BDD/$TABLE.txt
 						fi
 						bunzip2 -k $DIR/$BDD/$TABLE.txt.bz2
 					fi
