@@ -67,7 +67,9 @@ backup()
         DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
     fi
 
-    for BDD in $DATABASES; do				
+    for BDD in $DATABASES; do
+    
+        f_log "Dump database $BDD"
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
