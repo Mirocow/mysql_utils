@@ -11,13 +11,13 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 # === FUNCTIONS ===
 database_exists()
 {
-	query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
-	RESULT=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -e "$query")
-	if [ "$RESULT" == "$@" ]; then
-		echo YES
-	else
-		echo NO
-	fi
+    query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
+    RESULT=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -e "$query")
+    if [ "$RESULT" == "$@" ]; then
+        echo YES
+    else
+        echo NO
+    fi
 }
 
 contains () 
