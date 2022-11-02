@@ -62,16 +62,18 @@ restore()
 
 		BDD=$(basename $i)
 		
+		IFS=' ' read -r -a DATABASES_SELECTED <<< "$DATABASES_SELECTED"
 		if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
-			for select in "${DATABASES_SELECTED[@]}"; do
-				if [ $BDD != $select ]; then
+			for selected in "${DATABASES_SELECTED[@]}"; do		
+				if [ $BDD != $selected ]; then
 					f_log "Skip database $BDD"
 					unset BDD
 					break
 				fi								
 			done
-		fi		
-		
+		fi
+
+                IFS=' ' read -r -a DATABASES_SKIP <<< "$DATABASES_SKIP"
 		if [ ${#DATABASES_SKIP[@]} -ne 0 ]; then
 			for skip in "${DATABASES_SKIP[@]}"; do
 				if [ $BDD = $skip ]; then
