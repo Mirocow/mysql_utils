@@ -57,12 +57,14 @@ restore()
 			f_log "Your must run script from backup directory"
 			exit 1
 	fi
+	
+	IFS=' ' read -r -a DATABASES_SELECTED <<< "$DATABASES_SELECTED"
+	IFS=' ' read -r -a DATABASES_SKIP <<< "$DATABASES_SKIP"
 
 	for i in $(ls -1 -d $DIR/*); do
 
 		BDD=$(basename $i)
 		
-		IFS=' ' read -r -a DATABASES_SELECTED <<< "$DATABASES_SELECTED"
 		if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
 			for selected in "${DATABASES_SELECTED[@]}"; do		
 				if [ $BDD != $selected ]; then
@@ -73,7 +75,6 @@ restore()
 			done
 		fi
 
-                IFS=' ' read -r -a DATABASES_SKIP <<< "$DATABASES_SKIP"
 		if [ ${#DATABASES_SKIP[@]} -ne 0 ]; then
 			for skip in "${DATABASES_SKIP[@]}"; do
 				if [ $BDD = $skip ]; then
