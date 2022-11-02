@@ -62,7 +62,7 @@ restore()
       if [ -f "$DIR/$TABLE.txt.bz2" ]; then
           f_log "< $TABLE"
           if [ -f "$DIR/$TABLE.txt" ]; then
-            f_log "rm $DIR/$TABLE.txt"
+            f_log "Delete source file: $DIR/$TABLE.txt"
             rm $DIR/$TABLE.txt
           fi
           bunzip2 -k $DIR/$TABLE.txt.bz2
@@ -91,11 +91,6 @@ restore()
 				rm "$segment"
 			fi			
 		done
-
-		if [ -f "$DIR/$TABLE.txt" ]; then
-			f_log "Delete source file: $TABLE.txt"
-			rm $DIR/$TABLE.txt
-		fi
 						
 	  fi
 		
