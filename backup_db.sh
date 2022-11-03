@@ -77,25 +77,25 @@ backup()
 
 	query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
 	for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName >> $BACKUP_DIR/$DATABASE/__views.sql 2>> $BACKUP_DIR/$DATABASE/error.log
+		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
 		array_views+=($viewName)
 	done		
 	if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
 		f_log "  > Exports views"
 	fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__routines.sql
-    if [ -f $BACKUP_DIR/$BDD/__routines.sql ]; then
+    mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__routines.sql
+    if [ -f $BACKUP_DIR/$DATABASE/__routines.sql ]; then
         f_log "  > Exporting Routines"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__triggers.sql
-    if [ -f $BACKUP_DIR/$BDD/__triggers.sql ]; then
+    mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__triggers.sql
+    if [ -f $BACKUP_DIR/$DATABASE/__triggers.sql ]; then
         f_log "  > Exporting Triggers"
     fi 
 
-    mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__events.sql
-    if [ -f $BACKUP_DIR/$BDD/__events.sql ]; then
+    mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__events.sql
+    if [ -f $BACKUP_DIR/$DATABASE/__events.sql ]; then
         f_log "  > Exporting Events"
     fi 
 

@@ -67,40 +67,40 @@ backup()
         DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
     fi
 
-    for BDD in $DATABASES; do				
+    for DATABASE in $DATABASES; do				
 
-        mkdir -p $BACKUP_DIR/$BDD 2>/dev/null 1>&2
-        chown $USER:$GROUP $BACKUP_DIR/$BDD
-        chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$BDD
-        touch $DSBACKUP_DIRT/$BDD/error.log
+        mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
+        chown $USER:$GROUP $BACKUP_DIR/$DATABASE
+        chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$DATABASE
+        touch $DSBACKUP_DIRT/$DATABASE/error.log
 
-        query="SHOW CREATE DATABASE \`$BDD\`;"
-        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$BDD/__create.sql
-        if [ -f $BACKUP_DIR/$BDD/__create.sql ]; then
+        query="SHOW CREATE DATABASE \`$DATABASE\`;"
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
+        if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
             f_log "  > Export create"
         fi
 
         query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-        for viewName in $(mysql --defaults-file=$CONFIG_FILE $BDD -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-            mysqldump --defaults-file=$CONFIG_FILE $BDD $viewName >> $BACKUP_DIR/$BDD/__views.sql 2>> $BACKUP_DIR/$BDD/error.log
+        for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
+            mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
             array_views+=($viewName)
         done		
-        if [ -f $BACKUP_DIR/$BDD/__views.sql ]; then
+        if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
             f_log "  > Exports views"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__routines.sql
-        if [ -f $BACKUP_DIR/$BDD/__routines.sql ]; then
+        mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__routines.sql
+        if [ -f $BACKUP_DIR/$DATABASE/__routines.sql ]; then
             f_log "  > Exporting Routines"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__triggers.sql
-        if [ -f $BACKUP_DIR/$BDD/__triggers.sql ]; then
+        mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__triggers.sql
+        if [ -f $BACKUP_DIR/$DATABASE/__triggers.sql ]; then
             f_log "  > Exporting Triggers"
         fi 
 
-        mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $BACKUP_DIR/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$BDD/__events.sql
-        if [ -f $BACKUP_DIR/$BDD/__events.sql ]; then
+        mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__events.sql
+        if [ -f $BACKUP_DIR/$DATABASE/__events.sql ]; then
             f_log "  > Exporting Events"
         fi               
 
@@ -118,59 +118,59 @@ backup()
         f_log "Exclude data tables: $data_tables_exclude_expression"
 		
         query="SHOW TABLES;"
-        for TABLE in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $BDD -e "$query" | egrep -v "$tables_exclude_expression"); do
-            f_log "  ** Dump $BDD.$TABLE"
+        for TABLE in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e "$query" | egrep -v "$tables_exclude_expression"); do
+            f_log "  ** Dump $DATABASE.$TABLE"
 
             if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
                 f_log "Exclude data from table $TABLE"
-                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$BDD/ $BDD $TABLE 2>> $BACKUP_DIR/$BDD/error.log
+                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
             else
                 # If fields has geospatial types			
-                checkGeo="mysql --defaults-file=$CONFIG_FILE -B $BDD -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+                checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
                 hasGeo=$(eval $checkGeo)
                 if [ ! -z "$hasGeo" ]; then				
-                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$BDD/$TABLE.sql $BDD $TABLE 2>> $BACKUP_DIR/$BDD/error.log
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
 		        else
-                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$BDD/ $BDD $TABLE 2>> $BACKUP_DIR/$BDD/error.log
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
 		        fi
             fi           
 
-            if [ -f "$BACKUP_DIR/$BDD/$TABLE.sql" ]; then
-                chmod $FILEATTRIBUTES $BACKUP_DIR/$BDD/$TABLE.sql
-                chown $USER:$GROUP $BACKUP_DIR/$BDD/$TABLE.sql
-                f_log "  ** set perm on $BDD/$TABLE.sql"
+            if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.sql" ]; then
+                chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.sql
+                chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.sql
+                f_log "  ** set perm on $DATABASE/$TABLE.sql"
             else
-                f_log "  ** WARNING : $BACKUP_DIR/$BDD/$TABLE.sql not found"
+                f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.sql not found"
             fi
 
-            if [ -f "$BACKUP_DIR/$BDD/$TABLE.txt" ]; then
+            if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt" ]; then
 
                 if [ $COMPRESS ]; then
 
-                    f_log "  ** $COMPRESS $BDD/$TABLE.txt in background"
+                    f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
 
                     if [ $COMPRESS == 'bzip2' ]; then
 					
-                        if [ -f "$BACKUP_DIR/$BDD/$TABLE.txt.bz2" ]; then
-                            rm $BACKUP_DIR/$BDD/$TABLE.txt.bz2
+                        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
+                            rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
                         fi					
                         
-                        ($COMPRESS $BACKUP_DIR/$BDD/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$BDD/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $BACKUP_DIR/$BDD/$TABLE.txt.bz2) &
+                        ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
 						
                     elif [ $COMPRESS == 'gzip' ]; then
 					
-                        if [ -f "$BACKUP_DIR/$BDD/$TABLE.txt.gz" ]; then
-                            rm $BACKUP_DIR/$BDD/$TABLE.txt.gz
+                        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.gz" ]; then
+                            rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
                         fi					
                         
-                        ($COMPRESS $BACKUP_DIR/$BDD/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$BDD/$TABLE.txt.gz && chmod $FILEATTRIBUTES $BACKUP_DIR/$BDD/$TABLE.txt.gz) &
+                        ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
 						
                     fi
 
                 fi
 
             else
-                f_log "  ** WARNING : $BACKUP_DIR/$BDD/$TABLE.txt not found"
+                f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.txt not found"
             fi
 
         done
