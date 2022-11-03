@@ -27,9 +27,9 @@ f_log()
 
 restore()
 {
-  DIR=$@
+  RESTORE_DIR=$@
 
-  f_log "Check path $DIR"
+  f_log "Check path $RESTORE_DIR"
 	
 	f_log "** START **"
 
@@ -37,83 +37,86 @@ restore()
 
   if [ $BDD ]; then
 
-    f_log "Found backup files $DIR"
+    f_log "Found backup files $RESTORE_DIR"
 
-    if [ -f $DIR/__create.sql ]; then
+    if [ -f $RESTORE_DIR/__create.sql ]; then
       f_log "Create database $BDD"
-      mysql --defaults-file=$CONFIG_FILE < $DIR/__create.sql 2>/dev/null
+      mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>/dev/null
     fi
 
-    tables=$(ls -1 $DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
+    tables=$(ls -1 $RESTORE_DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
     f_log "Create tables in $BDD"
     for TABLE in $tables; do
       f_log "Create table: $BDD/$TABLE"
       mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
                       DROP TABLE IF EXISTS $TABLE;
-                      SOURCE $DIR/$TABLE.sql;
+                      SOURCE $RESTORE_DIR/$TABLE.sql;
                       SET foreign_key_checks = 1;"
     done
 
     f_log "Import data into $BDD"
     for TABLE in $tables; do
 			
-      f_log "Import data into $BDD/$TABLE"
-      if [ -f "$DIR/$TABLE.txt.bz2" ]; then
+        f_log "Import data into $BDD/$TABLE"
+          
+        if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt.bz2" ]; then
           f_log "< $TABLE"
-          if [ -f "$DIR/$TABLE.txt" ]; then
-            f_log "Delete source file: $DIR/$TABLE.txt"
-            rm $DIR/$TABLE.txt
+          if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+            f_log "Delete source: $TABLE.txt"
+            rm $RESTORE_DIR/$BDD/$TABLE.txt
           fi
-          bunzip2 -k $DIR/$TABLE.txt.bz2
-      fi
+          bunzip2 -k $RESTORE_DIR/$BDD/$TABLE.txt.bz2
+        fi
+            
+        if [ -s "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+          f_log "+ $TABLE"
 
-      if [ -s "$DIR/$TABLE.txt" ]; then				
+          mysql -h $MYSQL_HOST -u$MYSQL_ROOT_USER_NAME -p$MYSQL_ROOT_PASSWORD $BDD --local-infile -e "
+          SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+          SET foreign_key_checks = 0;
+          SET unique_checks = 0;
+          SET sql_log_bin = 0;
+          SET autocommit = 0;		
+          LOAD DATA LOCAL INFILE '$RESTORE_DIR/$BDD/$TABLE.txt' INTO TABLE $TABLE;
+          COMMIT;			
+          SET autocommit=1;
+          SET foreign_key_checks = 1; 
+          SET unique_checks = 1;
+          SET sql_log_bin = 1;
+          "							
+        fi
 
-		f_log "+ $TABLE"						
-        
-		split -l $CONFIG_CHUNK "$DIR/$TABLE.txt" "$DIR/${TABLE}_part_"
-		for segment in "$DIR/${TABLE}"_part_*; do
-			f_log "Restore from $segment"
-			mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
-			SET foreign_key_checks = 0; 
-			SET unique_checks = 0; 
-			SET sql_log_bin = 0;
-			SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
-			SET character_set_database=utf8;
-			LOAD DATA LOCAL INFILE '$segment' INTO TABLE $TABLE;
-			SET foreign_key_checks = 1; 
-			SET unique_checks = 1; 
-			SET sql_log_bin = 1;"			
-	
-			if [ -f "$segment" ]; then
-				f_log "Delete segment $segment"
-				rm "$segment"
-			fi			
-		done
-						
-	  fi
-		
-		if [ $DATABASES_TABLE_CHECK ]; then
-			if [ -f "$DIR/$BDD/$TABLE.ibd" ]; then
-				if [ ! $(innochecksum $DIR/$TABLE.ibd) ]; then
-					f_log "$TABLE [OK]"
-				else
-					f_log "$TABLE [ERR]"
-				fi
-			fi
-		fi
+        if [ $DATABASES_TABLE_CHECK ]; then
+          if [ -f "$RESTORE_DIR/$BDD/$TABLE.ibd" ]; then
+            if [ ! $(innochecksum $RESTORE_DIR/$BDD/$TABLE.ibd) ]; then
+              f_log "$TABLE [OK]"
+            else
+              f_log "$TABLE [ERR]"
+            fi
+          fi
+        fi
 			
     done
 
-    if [ -f "$DIR/__routines.sql" ]; then
-      f_log "Import routines into $BDD"
-      mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/__routines.sql 2>/dev/null
+    if [ -f "$RESTORE_DIR/$BDD/__routines.sql" ]; then
+        f_log "Import routines into $BDD"
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__routines.sql 2>/dev/null
+    fi
+    
+    if [ -f "$RESTORE_DIR/$BDD/__views.sql" ]; then
+        f_log "Import views into $BDD"
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__views.sql 2>/dev/null
     fi
 
-    if [ -f "$DIR/__views.sql" ]; then
-      f_log "Import views into $BDD"
-      mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/__views.sql 2>/dev/null
+    if [ -f "$RESTORE_DIR/$BDD/__triggers.sql" ]; then
+        f_log "Import triggers into $BDD"
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__triggers.sql 2>/dev/null
+    fi
+
+    if [ -f "$RESTORE_DIR/$BDD/__events.sql" ]; then
+        f_log "Import events into $BDD"
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__events.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
