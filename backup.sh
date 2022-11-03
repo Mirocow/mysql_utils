@@ -67,9 +67,7 @@ backup()
         DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
     fi
 
-    for BDD in $DATABASES; do
-    
-        f_log "Dump database $BDD"
+    for BDD in $DATABASES; do				
 
         mkdir -p $DST/$BDD 2>/dev/null 1>&2
         chown $USER:$GROUP $DST/$BDD
@@ -91,10 +89,20 @@ backup()
             f_log "  > Exports views"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
+        mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__routines.sql
         if [ -f $DST/$BDD/__routines.sql ]; then
-            f_log "  > Exports Routines"
+            f_log "  > Exporting Routines"
         fi
+
+        mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__triggers.sql
+        if [ -f $DST/$BDD/__triggers.sql ]; then
+            f_log "  > Exporting Triggers"
+        fi 
+
+        mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $BDD 2>> $DST/$BDD/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$BDD/__events.sql
+        if [ -f $DST/$BDD/__events.sql ]; then
+            f_log "  > Exporting Events"
+        fi               
 
         local default_tables_exclude=(
             'slow_log'
@@ -115,16 +123,16 @@ backup()
 
             if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
                 f_log "Exclude data from table $TABLE"
-                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+                mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
             else
                 # If fields has geospatial types			
                 checkGeo="mysql --defaults-file=$CONFIG_FILE -B $BDD -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
                 hasGeo=$(eval $checkGeo)
                 if [ ! -z "$hasGeo" ]; then				
-                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick  --result-file=$DST/$BDD/$TABLE.sql $BDD $TABLE 2>> $DST/$BDD/error.log
-		else
-                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick  --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
-		fi
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$DST/$BDD/$TABLE.sql $BDD $TABLE 2>> $DST/$BDD/error.log
+		        else
+                    mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$DST/$BDD/ $BDD $TABLE 2>> $DST/$BDD/error.log
+		        fi
             fi           
 
             if [ -f "$DST/$BDD/$TABLE.sql" ]; then
@@ -143,18 +151,18 @@ backup()
 
                     if [ $COMPRESS == 'bzip2' ]; then
 					
-			if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
-				rm $DST/$BDD/$TABLE.txt.bz2
-			fi					
-					
+                        if [ -f "$DST/$BDD/$TABLE.txt.bz2" ]; then
+                            rm $DST/$BDD/$TABLE.txt.bz2
+                        fi					
+                        
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.bz2) &
 						
                     elif [ $COMPRESS == 'gzip' ]; then
 					
-			if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
-				rm $DST/$BDD/$TABLE.txt.gz
-			fi					
-					
+                        if [ -f "$DST/$BDD/$TABLE.txt.gz" ]; then
+                            rm $DST/$BDD/$TABLE.txt.gz
+                        fi					
+                        
                         ($COMPRESS $DST/$BDD/$TABLE.txt && chown $USER:$GROUP $DST/$BDD/$TABLE.txt.gz && chmod $FILEATTRIBUTES $DST/$BDD/$TABLE.txt.gz) &
 						
                     fi

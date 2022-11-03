@@ -174,6 +174,16 @@ restore()
 						f_log "Import views into $BDD"
 						mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/$BDD/__views.sql 2>/dev/null
 				fi
+
+				if [ -f "$DIR/$BDD/__triggers.sql" ]; then
+						f_log "Import triggers into $BDD"
+						mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/$BDD/__triggers.sql 2>/dev/null
+				fi
+
+				if [ -f "$DIR/$BDD/__events.sql" ]; then
+						f_log "Import events into $BDD"
+						mysql --defaults-file=$CONFIG_FILE $BDD < $DIR/$BDD/__events.sql 2>/dev/null
+				fi								
 				
 			fi
 		fi				
