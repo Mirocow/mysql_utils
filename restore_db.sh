@@ -9,20 +9,20 @@ VERBOSE=0
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
-f_log() 
+f_log()
 {
     local bold=$(tput bold)
     local yellow=$(tput setf 6)
     local red=$(tput setf 4)
     local green=$(tput setf 2)
     local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
-	
+    local toend=$(tput hpa $(tput cols))$(tput cub 6)
+
     logger "RESTORE: $@"
-	
+
     if [ $VERBOSE -eq 1 ]; then
         echo "RESTORE: $@"
-    fi	
+    fi
 }
 
 restore()
@@ -30,8 +30,8 @@ restore()
   RESTORE_DIR=$@
 
   f_log "Check path $RESTORE_DIR"
-	
-	f_log "** START **"
+
+  f_log "** START **"
 
   BDD=${DIR##*/}
 
@@ -50,16 +50,17 @@ restore()
     for TABLE in $tables; do
       f_log "Create table: $BDD/$TABLE"
       mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
-                      DROP TABLE IF EXISTS $TABLE;
-                      SOURCE $RESTORE_DIR/$TABLE.sql;
-                      SET foreign_key_checks = 1;"
+        DROP TABLE IF EXISTS $TABLE;
+        SOURCE $RESTORE_DIR/$TABLE.sql;
+        SET foreign_key_checks = 1;
+        "
     done
 
     f_log "Import data into $BDD"
     for TABLE in $tables; do
-			
+
         f_log "Import data into $BDD/$TABLE"
-          
+
         if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt.bz2" ]; then
           f_log "< $TABLE"
           if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
@@ -68,23 +69,23 @@ restore()
           fi
           bunzip2 -k $RESTORE_DIR/$BDD/$TABLE.txt.bz2
         fi
-            
+
         if [ -s "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
           f_log "+ $TABLE"
 
-          mysql -h $MYSQL_HOST -u$MYSQL_ROOT_USER_NAME -p$MYSQL_ROOT_PASSWORD $BDD --local-infile -e "
+          mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
           SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
           SET foreign_key_checks = 0;
           SET unique_checks = 0;
           SET sql_log_bin = 0;
-          SET autocommit = 0;		
+          SET autocommit = 0;
           LOAD DATA LOCAL INFILE '$RESTORE_DIR/$BDD/$TABLE.txt' INTO TABLE $TABLE;
-          COMMIT;			
+          COMMIT;
           SET autocommit=1;
-          SET foreign_key_checks = 1; 
+          SET foreign_key_checks = 1;
           SET unique_checks = 1;
           SET sql_log_bin = 1;
-          "							
+          "
         fi
 
         if [ $DATABASES_TABLE_CHECK ]; then
@@ -96,14 +97,14 @@ restore()
             fi
           fi
         fi
-			
+
     done
 
     if [ -f "$RESTORE_DIR/$BDD/__routines.sql" ]; then
         f_log "Import routines into $BDD"
         mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__routines.sql 2>/dev/null
     fi
-    
+
     if [ -f "$RESTORE_DIR/$BDD/__views.sql" ]; then
         f_log "Import views into $BDD"
         mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__views.sql 2>/dev/null
@@ -142,8 +143,8 @@ OPTIONS:
    -e      Exclude databases
    -s      Selected databases
    -c      Check innochecksum of table after import
-	 
-	 
+
+
 EOF
 }
 
@@ -175,11 +176,11 @@ do
         --chunk=*)
             CONFIG_CHUNK=( "${i#*=}" )
             shift # past argument=value
-        ;;				
+        ;;
         -c)
             DATABASES_TABLE_CHECK=1
             shift
-	;;				
+  ;;
         -v | --verbose)
             VERBOSE=1
             shift # past argument=value

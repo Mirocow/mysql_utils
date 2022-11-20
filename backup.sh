@@ -23,8 +23,8 @@ f_log()
     local red=$(tput setf 4)
     local green=$(tput setf 2)
     local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
-    
+    local toend=$(tput hpa $(tput cols))$(tput cub 6)
+
     logger "BACKUP: $@"
 
     if [ $VERBOSE -eq 1 ]; then
@@ -67,7 +67,7 @@ backup()
         DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
     fi
 
-    for DATABASE in $DATABASES; do				
+    for DATABASE in $DATABASES; do
 
         mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
         chown $USER:$GROUP $BACKUP_DIR/$DATABASE
@@ -84,7 +84,7 @@ backup()
         for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
             mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
             array_views+=($viewName)
-        done		
+        done
         if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
             f_log "  > Exports views"
         fi
@@ -97,12 +97,12 @@ backup()
         mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__triggers.sql
         if [ -f $BACKUP_DIR/$DATABASE/__triggers.sql ]; then
             f_log "  > Exporting Triggers"
-        fi 
+        fi
 
         mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__events.sql
         if [ -f $BACKUP_DIR/$DATABASE/__events.sql ]; then
             f_log "  > Exporting Events"
-        fi               
+        fi
 
         local default_tables_exclude=(
             'slow_log'
@@ -111,12 +111,12 @@ backup()
 
         tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
         tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
-        f_log "Exclude tables: $tables_exclude_expression"		
+        f_log "Exclude tables: $tables_exclude_expression"
 
         data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
         data_tables_exclude_expression=`prepaire_skip_expression "${data_tables_exclude[@]}"`
         f_log "Exclude data tables: $data_tables_exclude_expression"
-		
+
         query="SHOW TABLES;"
         for TABLE in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e "$query" | egrep -v "$tables_exclude_expression"); do
             f_log "  ** Dump $DATABASE.$TABLE"
@@ -125,15 +125,15 @@ backup()
                 f_log "Exclude data from table $TABLE"
                 mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
             else
-                # If fields has geospatial types			
+                # If fields has geospatial types
                 checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
                 hasGeo=$(eval $checkGeo)
-                if [ ! -z "$hasGeo" ]; then				
+                if [ ! -z "$hasGeo" ]; then
                     mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
-		        else
+                else
                     mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
-		        fi
-            fi           
+                fi
+            fi
 
             if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.sql
@@ -150,21 +150,21 @@ backup()
                     f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
 
                     if [ $COMPRESS == 'bzip2' ]; then
-					
+
                         if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
                             rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
-                        fi					
-                        
+                        fi
+
                         ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
-						
+
                     elif [ $COMPRESS == 'gzip' ]; then
-					
+
                         if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.gz" ]; then
                             rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
-                        fi					
-                        
+                        fi
+
                         ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
-						
+
                     fi
 
                 fi
@@ -183,9 +183,9 @@ backup()
 usage()
 {
     cat << EOF
-    
+
         This mysql backup engine.
-    
+
         Usage:  $0 <[options]> or bash $0 <[options]>
 
 Options:
@@ -210,8 +210,8 @@ Examples:
         backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-				
-				
+
+
 EOF
 }
 
@@ -249,9 +249,9 @@ do
             shift # past argument=value
         ;;
         -i=* | --include=*)
-            DATABASES=( "${i#*=}" )            
+            DATABASES=( "${i#*=}" )
             shift # past argument=value
-        ;;        
+        ;;
         --exclude-tables=*)
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
@@ -259,7 +259,7 @@ do
         --exclude-data-tables=*)
             EXCLUDE_DATA_TABLES=( "${i#*=}" )
             shift # past argument=value
-        ;;		
+        ;;
         -c=* | --compress=*)
             COMPRESS=( "${i#*=}" )
             shift # past argument=value

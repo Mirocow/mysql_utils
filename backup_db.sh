@@ -29,8 +29,8 @@ f_log()
     local red=$(tput setf 4)
     local green=$(tput setf 2)
     local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
-    
+    local toend=$(tput hpa $(tput cols))$(tput cub 6)
+
     logger "BACKUP: $@"
 
     if [ $VERBOSE -eq 1 ]; then
@@ -58,31 +58,31 @@ backup()
     query="SHOW databases;"
 
     local default_databases_exclude=(
-	'information_schema'
-	'performance_schema'
+    'information_schema'
+    'performance_schema'
     )
 
-    local array_views=()	
+    local array_views=()
 
-	mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
-	chown $USER:$GROUP $BACKUP_DIR/$DATABASE
-	chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$DATABASE
-	touch $BACKUP_DIR/$DATABASE/error.log
+    mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
+    chown $USER:$GROUP $BACKUP_DIR/$DATABASE
+    chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$DATABASE
+    touch $BACKUP_DIR/$DATABASE/error.log
 
-	query="SHOW CREATE DATABASE \`$DATABASE\`;"
-	mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
-	if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
-		f_log "  > Export create"
-	fi
+    query="SHOW CREATE DATABASE \`$DATABASE\`;"
+    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
+    if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
+        f_log "  > Export create"
+    fi
 
-	query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-	for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
-		array_views+=($viewName)
-	done		
-	if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
-		f_log "  > Exports views"
-	fi
+    query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
+    for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
+        mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
+        array_views+=($viewName)
+    done
+    if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
+        f_log "  > Exports views"
+    fi
 
     mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__routines.sql
     if [ -f $BACKUP_DIR/$DATABASE/__routines.sql ]; then
@@ -92,100 +92,100 @@ backup()
     mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__triggers.sql
     if [ -f $BACKUP_DIR/$DATABASE/__triggers.sql ]; then
         f_log "  > Exporting Triggers"
-    fi 
+    fi
 
     mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__events.sql
     if [ -f $BACKUP_DIR/$DATABASE/__events.sql ]; then
         f_log "  > Exporting Events"
-    fi 
+    fi
 
-	local default_tables_exclude=(
-	'slow_log'
-	'general_log'
-	)
+    local default_tables_exclude=(
+    'slow_log'
+    'general_log'
+    )
 
-	tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
-	tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
-	f_log "Exclude tables: $tables_exclude_expression"		
+    tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
+    tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
+    f_log "Exclude tables: $tables_exclude_expression"
 
-	data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
-	data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
-	f_log "Exclude data tables: $data_tables_exclude_expression"
+    data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
+    data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
+    f_log "Exclude data tables: $data_tables_exclude_expression"
 
-	tables=( ${TABLES[@]} )
-	tables_expression=$(prepaire_skip_expression "${tables[@]}")
-	f_log "Only tables: $tables_expression"
-	
-	query="SHOW TABLES;"
-	command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
-	
-	if [ $tables_exclude_expression ]; then
-		command=" $command | egrep -v \"$tables_exclude_expression\""
-	fi
+    tables=( ${TABLES[@]} )
+    tables_expression=$(prepaire_skip_expression "${tables[@]}")
+    f_log "Only tables: $tables_expression"
 
-	if [ $tables_expression ]; then
-		command=" $command | egrep \"$tables_expression\""
-	fi
-	
-	f_log "Command: $command"
-	
-	for TABLE in $(eval $command); do
-	
-		f_log " ** Dump $DATABASE.$TABLE"
+    query="SHOW TABLES;"
+    command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
 
-		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
-			f_log "Exclude data from table $TABLE"
-			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
-		else
-			# If fields has geospatial types			
-			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
-			hasGeo=$(eval $checkGeo)
-			if [ ! -z "$hasGeo" ]; then
-				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
-			else
-				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
-			fi
-		fi            
+    if [ $tables_exclude_expression ]; then
+        command=" $command | egrep -v \"$tables_exclude_expression\""
+    fi
 
-		if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.sql" ]; then
-			chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.sql
-			chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.sql
-			f_log "  ** set perm on $DATABASE/$TABLE.sql"
-		else
-			f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.sql not found"
-		fi
+    if [ $tables_expression ]; then
+        command=" $command | egrep \"$tables_expression\""
+    fi
 
-		if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt" ]; then
+    f_log "Command: $command"
 
-			if [ $COMPRESS ]; then
+    for TABLE in $(eval $command); do
 
-				f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
+        f_log " ** Dump $DATABASE.$TABLE"
 
-				if [ $COMPRESS == 'bzip2' ]; then
-				
-					if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
-						rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
-					fi					
-				
-					($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
-					
-				elif [ $COMPRESS == 'gzip' ]; then
-				
-					if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.gz" ]; then
-						rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
-					fi					
-				
-					($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
-					
-				fi
+        if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
+            f_log "Exclude data from table $TABLE"
+            mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
+        else
+            # If fields has geospatial types
+            checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+            hasGeo=$(eval $checkGeo)
+            if [ ! -z "$hasGeo" ]; then
+                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
+            else
+                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
+            fi
+        fi
 
-			fi
+        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.sql" ]; then
+            chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.sql
+            chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.sql
+            f_log "  ** set perm on $DATABASE/$TABLE.sql"
+        else
+            f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.sql not found"
+        fi
 
-		else
-			f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.txt not found"
-		fi
+        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt" ]; then
 
-	done
+            if [ $COMPRESS ]; then
+
+                f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
+
+                if [ $COMPRESS == 'bzip2' ]; then
+
+                    if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
+                        rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
+                    fi
+
+                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
+
+                elif [ $COMPRESS == 'gzip' ]; then
+
+                    if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.gz" ]; then
+                        rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
+                    fi
+
+                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
+
+                fi
+
+            fi
+
+        else
+            f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.txt not found"
+        fi
+
+    done
 
     f_log " END "
 }
@@ -193,9 +193,9 @@ backup()
 usage()
 {
     cat << EOF
-    
+
         This mysql backup engine.
-    
+
         Usage:  $0 <[database-name]> <[options]> or bash $0 <[database-name]> <[options]>
 
 Options:
@@ -220,7 +220,7 @@ Examples:
         backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --tables="tbl_template tbl_template1 tbl_template2"
-				
+
 EOF
 }
 
@@ -247,11 +247,11 @@ done
 
 for i in "$@"
 do
-    case $i in	
+    case $i in
         -t=* | --tables=*)
             TABLES=( "${i#*=}" )
             shift # past argument=value
-        ;;	
+        ;;
         --exclude-tables=*)
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
@@ -259,7 +259,7 @@ do
         --exclude-data-tables=*)
             EXCLUDE_DATA_TABLES=( "${i#*=}" )
             shift # past argument=value
-        ;;		
+        ;;
         -c=* | --compress=*)
             COMPRESS=( "${i#*=}" )
             shift # past argument=value
@@ -298,7 +298,7 @@ DSTOLD=$BACKUP_DIR/$DATEOLD
 if [ ! -d "$BACKUP_DIR" ]; then
     mkdir -p $BACKUP_DIR;
     chmod $DIRECTORYATTRIBUTES $BACKUP_DIR;
-    chown $USER:$GROUP $BACKUP_DIR;    
+    chown $USER:$GROUP $BACKUP_DIR;
 fi
 
 if [ -d "$DSTOLD" ]; then
