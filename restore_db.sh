@@ -82,16 +82,16 @@ restore()
 
         f_log "Import data into $BDD/$TABLE"
 
-        if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt.bz2" ]; then
+        if [ -f "$RESTORE_DIR/$TABLE.txt.bz2" ]; then
           f_log "< $TABLE"
-          if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+          if [ -f "$RESTORE_DIR/$TABLE.txt" ]; then
             f_log "Delete source: $TABLE.txt"
-            rm $RESTORE_DIR/$BDD/$TABLE.txt
+            rm $RESTORE_DIR/$TABLE.txt
           fi
-          bunzip2 -k $RESTORE_DIR/$BDD/$TABLE.txt.bz2
+          bunzip2 -k $RESTORE_DIR/$TABLE.txt.bz2
         fi
 
-        if [ -s "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+        if [ -s "$RESTORE_DIR/$TABLE.txt" ]; then
           f_log "+ $TABLE"
 
           mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
@@ -100,7 +100,7 @@ restore()
           SET unique_checks = 0;
           SET sql_log_bin = 0;
           SET autocommit = 0;
-          LOAD DATA LOCAL INFILE '$RESTORE_DIR/$BDD/$TABLE.txt' INTO TABLE $TABLE;
+          LOAD DATA LOCAL INFILE '$RESTORE_DIR/$TABLE.txt' INTO TABLE $TABLE;
           COMMIT;
           SET autocommit=1;
           SET foreign_key_checks = 1;
@@ -110,8 +110,8 @@ restore()
         fi
 
         if [ $DATABASES_TABLE_CHECK ]; then
-          if [ -f "$RESTORE_DIR/$BDD/$TABLE.ibd" ]; then
-            if [ ! $(innochecksum $RESTORE_DIR/$BDD/$TABLE.ibd) ]; then
+          if [ -f "$RESTORE_DIR/$TABLE.ibd" ]; then
+            if [ ! $(innochecksum $RESTORE_DIR/$TABLE.ibd) ]; then
               f_log "$TABLE [OK]"
             else
               f_log "$TABLE [ERR]"
@@ -121,24 +121,24 @@ restore()
 
     done
 
-    if [ -f "$RESTORE_DIR/$BDD/__routines.sql" ]; then
+    if [ -f "$RESTORE_DIR/__routines.sql" ]; then
         f_log "Import routines into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__routines.sql 2>/dev/null
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__routines.sql 2>/dev/null
     fi
 
-    if [ -f "$RESTORE_DIR/$BDD/__views.sql" ]; then
+    if [ -f "$RESTORE_DIR/__views.sql" ]; then
         f_log "Import views into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__views.sql 2>/dev/null
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__views.sql 2>/dev/null
     fi
 
-    if [ -f "$RESTORE_DIR/$BDD/__triggers.sql" ]; then
+    if [ -f "$RESTORE_DIR/__triggers.sql" ]; then
         f_log "Import triggers into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__triggers.sql 2>/dev/null
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__triggers.sql 2>/dev/null
     fi
 
-    if [ -f "$RESTORE_DIR/$BDD/__events.sql" ]; then
+    if [ -f "$RESTORE_DIR/__events.sql" ]; then
         f_log "Import events into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__events.sql 2>/dev/null
+        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__events.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
