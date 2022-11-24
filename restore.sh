@@ -75,71 +75,71 @@ restore()
 
     for i in $(ls -1 -d $RESTORE_DIR/*); do
 
-        BDD=$(basename $i)
+        DATABASE=$(basename $i)
 
         if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
-            if ! contains $BDD "${DATABASES_SELECTED[@]}"; then
-                f_log "Skip database $BDD"
-                unset BDD
+            if ! contains $DATABASE "${DATABASES_SELECTED[@]}"; then
+                f_log "Skip database $DATABASE"
+                unset DATABASE
             fi
         fi
 
         if [ ${#DATABASES_SKIP[@]} -ne 0 ]; then
             for skip in "${DATABASES_SKIP[@]}"; do
-                if [ $BDD = $skip ]; then
-                    f_log "Skip database $BDD"
-                    unset BDD
+                if [ $DATABASE = $skip ]; then
+                    f_log "Skip database $DATABASE"
+                    unset DATABASE
                     break
                 fi
             done
         fi
 
-        if [ $BDD ]; then
+        if [ $DATABASE ]; then
 
-            if [ -f $RESTORE_DIR/$BDD/__create.sql ]; then
-                f_log "Create database $BDD"
-                mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/$BDD/__create.sql 2>/dev/null
+            if [ -f $RESTORE_DIR/$DATABASE/__create.sql ]; then
+                f_log "Create database $DATABASE"
+                mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/$DATABASE/__create.sql 2>/dev/null
             fi
 
-            if [ $(database_exists $BDD) != "YES" ]; then
-                f_log "Error: Database $BDD dose not exists";
+            if [ $(database_exists $DATABASE) != "YES" ]; then
+                f_log "Error: Database $DATABASE dose not exists";
             else
 
-                tables=$(ls -1 $RESTORE_DIR/$BDD | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
+                tables=$(ls -1 $RESTORE_DIR/$DATABASE | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
-                f_log "Create tables in $BDD"
+                f_log "Create tables in $DATABASE"
                 for TABLE in $tables; do
-                    f_log "Create table: $BDD/$TABLE"
-                    mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+                    f_log "Create table: $DATABASE/$TABLE"
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE -e "SET foreign_key_checks = 0;
                     DROP TABLE IF EXISTS $TABLE;
-                    SOURCE $RESTORE_DIR/$BDD/$TABLE.sql;
+                    SOURCE $RESTORE_DIR/$DATABASE/$TABLE.sql;
                     SET foreign_key_checks = 1;
                     "
                 done
 
-                f_log "Import data into $BDD"
+                f_log "Import data into $DATABASE"
                 for TABLE in $tables; do
-                    f_log "Import data into $BDD/$TABLE"
+                    f_log "Import data into $DATABASE/$TABLE"
 
-                    if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt.bz2" ]; then
+                    if [ -f "$RESTORE_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
                         f_log "< $TABLE"
-                        if [ -f "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+                        if [ -f "$RESTORE_DIR/$DATABASE/$TABLE.txt" ]; then
                             f_log "Delete source: $TABLE.txt"
-                            rm $RESTORE_DIR/$BDD/$TABLE.txt
+                            rm $RESTORE_DIR/$DATABASE/$TABLE.txt
                         fi
-                        bunzip2 -k $RESTORE_DIR/$BDD/$TABLE.txt.bz2
+                        bunzip2 -k $RESTORE_DIR/$DATABASE/$TABLE.txt.bz2
                     fi
 
-                    if [ -s "$RESTORE_DIR/$BDD/$TABLE.txt" ]; then
+                    if [ -s "$RESTORE_DIR/$DATABASE/$TABLE.txt" ]; then
                         f_log "+ $TABLE"
 
-                        mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
+                        mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                         SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                         SET foreign_key_checks = 0;
                         SET unique_checks = 0;
                         SET sql_log_bin = 0;
                         SET autocommit = 0;
-                        LOAD DATA LOCAL INFILE '$RESTORE_DIR/$BDD/$TABLE.txt' INTO TABLE $TABLE;
+                        LOAD DATA LOCAL INFILE '$RESTORE_DIR/$DATABASE/$TABLE.txt' INTO TABLE $TABLE;
                         COMMIT;
                         SET autocommit=1;
                         SET foreign_key_checks = 1;
@@ -149,8 +149,8 @@ restore()
                     fi
 
                     if [ $DATABASES_TABLE_CHECK ]; then
-                        if [ -f "$RESTORE_DIR/$BDD/$TABLE.ibd" ]; then
-                            if [ ! $(innochecksum $RESTORE_DIR/$BDD/$TABLE.ibd) ]; then
+                        if [ -f "$RESTORE_DIR/$DATABASE/$TABLE.ibd" ]; then
+                            if [ ! $(innochecksum $RESTORE_DIR/$DATABASE/$TABLE.ibd) ]; then
                                 f_log "$TABLE [OK]"
                             else
                                 f_log "$TABLE [ERR]"
@@ -159,24 +159,24 @@ restore()
                     fi
                 done
 
-                if [ -f "$RESTORE_DIR/$BDD/__routines.sql" ]; then
-                        f_log "Import routines into $BDD"
-                        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__routines.sql 2>/dev/null
+                if [ -f "$RESTORE_DIR/$DATABASE/__routines.sql" ]; then
+                        f_log "Import routines into $DATABASE"
+                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__routines.sql 2>/dev/null
                 fi
 
-                if [ -f "$RESTORE_DIR/$BDD/__views.sql" ]; then
-                        f_log "Import views into $BDD"
-                        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__views.sql 2>/dev/null
+                if [ -f "$RESTORE_DIR/$DATABASE/__views.sql" ]; then
+                        f_log "Import views into $DATABASE"
+                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__views.sql 2>/dev/null
                 fi
 
-                if [ -f "$RESTORE_DIR/$BDD/__triggers.sql" ]; then
-                        f_log "Import triggers into $BDD"
-                        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__triggers.sql 2>/dev/null
+                if [ -f "$RESTORE_DIR/$DATABASE/__triggers.sql" ]; then
+                        f_log "Import triggers into $DATABASE"
+                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__triggers.sql 2>/dev/null
                 fi
 
-                if [ -f "$RESTORE_DIR/$BDD/__events.sql" ]; then
-                        f_log "Import events into $BDD"
-                        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/$BDD/__events.sql 2>/dev/null
+                if [ -f "$RESTORE_DIR/$DATABASE/__events.sql" ]; then
+                        f_log "Import events into $DATABASE"
+                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__events.sql 2>/dev/null
                 fi
 
             fi

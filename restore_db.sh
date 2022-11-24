@@ -54,33 +54,33 @@ restore()
 
   f_log "** START **"
 
-  BDD=${RESTORE_DIR##*/}
+  DATABASE=${RESTORE_DIR##*/}
 
-  if [ $BDD ]; then
+  if [ $DATABASE ]; then
 
     f_log "Found backup files $RESTORE_DIR"
 
     if [ -f $RESTORE_DIR/__create.sql ]; then
-      f_log "Create database $BDD"
+      f_log "Create database $DATABASE"
       mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>/dev/null
     fi
 
     tables=$(ls -1 $RESTORE_DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
-    f_log "Create tables in $BDD"
+    f_log "Create tables in $DATABASE"
     for TABLE in $tables; do
-      f_log "Create table: $BDD/$TABLE"
-      mysql --defaults-file=$CONFIG_FILE $BDD -e "SET foreign_key_checks = 0;
+      f_log "Create table: $DATABASE/$TABLE"
+      mysql --defaults-file=$CONFIG_FILE $DATABASE -e "SET foreign_key_checks = 0;
         DROP TABLE IF EXISTS $TABLE;
         SOURCE $RESTORE_DIR/$TABLE.sql;
         SET foreign_key_checks = 1;
         "
     done
 
-    f_log "Import data into $BDD"
+    f_log "Import data into $DATABASE"
     for TABLE in $tables; do
 
-        f_log "Import data into $BDD/$TABLE"
+        f_log "Import data into $DATABASE/$TABLE"
 
         if [ -f "$RESTORE_DIR/$TABLE.txt.bz2" ]; then
           f_log "< $TABLE"
@@ -94,7 +94,7 @@ restore()
         if [ -s "$RESTORE_DIR/$TABLE.txt" ]; then
           f_log "+ $TABLE"
 
-          mysql --defaults-file=$CONFIG_FILE $BDD --local-infile -e "
+          mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
           SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
           SET foreign_key_checks = 0;
           SET unique_checks = 0;
@@ -122,23 +122,23 @@ restore()
     done
 
     if [ -f "$RESTORE_DIR/__routines.sql" ]; then
-        f_log "Import routines into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__routines.sql 2>/dev/null
+        f_log "Import routines into $DATABASE"
+        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__routines.sql 2>/dev/null
     fi
 
     if [ -f "$RESTORE_DIR/__views.sql" ]; then
-        f_log "Import views into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__views.sql 2>/dev/null
+        f_log "Import views into $DATABASE"
+        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__views.sql 2>/dev/null
     fi
 
     if [ -f "$RESTORE_DIR/__triggers.sql" ]; then
-        f_log "Import triggers into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__triggers.sql 2>/dev/null
+        f_log "Import triggers into $DATABASE"
+        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__triggers.sql 2>/dev/null
     fi
 
     if [ -f "$RESTORE_DIR/__events.sql" ]; then
-        f_log "Import events into $BDD"
-        mysql --defaults-file=$CONFIG_FILE $BDD < $RESTORE_DIR/__events.sql 2>/dev/null
+        f_log "Import events into $DATABASE"
+        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__events.sql 2>/dev/null
     fi
 
     f_log "Flush privileges;"
