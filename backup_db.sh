@@ -71,7 +71,7 @@ backup()
     touch $BACKUP_DIR/$DATABASE/error.log
 
     query="SHOW CREATE DATABASE \`$DATABASE\`;"
-    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | 2>> $BACKUP_DIR/$DATABASE/error.log > $BACKUP_DIR/$DATABASE/__create.sql
+    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
     if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
         f_log "  > Export create"
     fi
@@ -139,7 +139,7 @@ backup()
             mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log
         else
             # If fields has geospatial types
-            checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+            checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
             hasGeo=$(eval $checkGeo)
             if [ ! -z "$hasGeo" ]; then
                 mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/error.log

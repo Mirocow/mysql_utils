@@ -82,7 +82,7 @@ backup()
         touch $BACKUP_DIR/$DATABASE/error.log
 
         query="SHOW CREATE DATABASE \`$DATABASE\`;"
-        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' 2>> $BACKUP_DIR/$DATABASE/error.log > $BACKUP_DIR/$DATABASE/__create.sql
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
         if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
             f_log "  > Export create"
         fi
@@ -126,7 +126,7 @@ backup()
 
         query="SHOW TABLES;"
         for TABLE in $(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e "$query" | egrep -v "$tables_exclude_expression"); do
-        
+
             f_log "  ** Dump $DATABASE.$TABLE"
 
             if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
