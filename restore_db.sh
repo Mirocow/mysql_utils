@@ -54,7 +54,7 @@ restore()
 
   f_log "** START **"
 
-  BDD=${DIR##*/}
+  BDD=${RESTORE_DIR##*/}
 
   if [ $BDD ]; then
 
