@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# === CONFIG ===
 VERBOSE=0
 COMPRESS='bzip2'
 USER='mysql'
@@ -229,14 +230,13 @@ if [ $# = 0 ]; then
     exit;
 fi
 
-DATABASE=''
 TABLES=''
 EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
 BIN_DEPS="mysql mysqldump $COMPRESS"
-
 DATABASE="$1"
 
+# === CHECKS ===
 for BIN in $BIN_DEPS; do
     which $BIN 1>/dev/null 2>&1
     if [ $? -ne 0 ]; then

@@ -9,6 +9,27 @@ VERBOSE=0
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
+database_exists()
+{
+    query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
+    RESULT=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -e "$query")
+    if [ "$RESULT" == "$@" ]; then
+        echo YES
+    else
+        echo NO
+    fi
+}
+
+contains ()
+{
+    param=$1;
+    shift;
+    for elem in "$@";
+    do
+        [[ "$param" = "$elem" ]] && return 0;
+    done;
+    return 1
+}
 f_log()
 {
     local bold=$(tput bold)
@@ -148,6 +169,7 @@ OPTIONS:
 EOF
 }
 
+# === CHECKS ===
 BACKUP_DIR=$(pwd)
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
@@ -169,27 +191,27 @@ done
 for i in "$@"
 do
     case $i in
-        --config=*)
-            CONFIG_FILE=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --chunk=*)
-            CONFIG_CHUNK=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        -c)
-            DATABASES_TABLE_CHECK=1
-            shift
-  ;;
-        -v | --verbose)
-            VERBOSE=1
-            shift # past argument=value
-        ;;
-        -h | --help)
-            usage
-            exit
-        ;;
-        *)
+    -c)
+        DATABASES_TABLE_CHECK=1
+        shift
+    ;;
+    --config=*)
+        CONFIG_FILE=( "${i#*=}" )
+        shift # past argument=value
+    ;;
+    --chunk=*)
+        CONFIG_CHUNK=( "${i#*=}" )
+        shift # past argument=value
+    ;;
+    -v | --verbose)
+         VERBOSE=1
+         shift # past argument=value
+    ;;
+    -h | --help)
+         usage
+         exit
+    ;;
+    *)
         # unknown option
         ;;
     esac

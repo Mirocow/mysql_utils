@@ -15,6 +15,13 @@ CONFIG_FILE='/etc/mysql/debian.cnf'
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
+# === FUNCTIONS ===
+if [ -f '/etc/debian_version' ]; then
+    CONFIG_FILE='/etc/mysql/debian.cnf'
+else
+    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
+fi
+
 # === FUNCTION ===
 f_log()
 {
@@ -72,7 +79,7 @@ backup()
         mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
         chown $USER:$GROUP $BACKUP_DIR/$DATABASE
         chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$DATABASE
-        touch $DSBACKUP_DIRT/$DATABASE/error.log
+        touch $BACKUP_DIR/$DATABASE/error.log
 
         query="SHOW CREATE DATABASE \`$DATABASE\`;"
         mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql
@@ -110,11 +117,11 @@ backup()
         )
 
         tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
-        tables_exclude_expression=`prepaire_skip_expression "${tables_exclude[@]}"`
+        tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
         f_log "Exclude tables: $tables_exclude_expression"
 
         data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
-        data_tables_exclude_expression=`prepaire_skip_expression "${data_tables_exclude[@]}"`
+        data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
         f_log "Exclude data tables: $data_tables_exclude_expression"
 
         query="SHOW TABLES;"
@@ -155,7 +162,7 @@ backup()
                             rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
                         fi
 
-                        ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
+                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
 
                     elif [ $COMPRESS == 'gzip' ]; then
 
@@ -163,7 +170,7 @@ backup()
                             rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
                         fi
 
-                        ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
+                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
 
                     fi
 
@@ -220,7 +227,6 @@ if [ $# = 0 ]; then
     exit;
 fi
 
-INCLUDE_DATABASES=''
 EXCLUDE_DATABASES=''
 EXCLUDE_TABLES=''
 EXCLUDE_DATA_TABLES=''
@@ -234,12 +240,6 @@ for BIN in $BIN_DEPS; do
         exit 1
     fi
 done
-
-if [ -f '/etc/debian_version' ]; then
-    CONFIG_FILE='/etc/mysql/debian.cnf'
-else
-    CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
-fi
 
 for i in "$@"
 do

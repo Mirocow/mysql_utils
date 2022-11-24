@@ -206,7 +206,6 @@ EOF
 }
 
 # === CHECKS ===
-
 BACKUP_DIR=$(pwd)
 
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
@@ -240,25 +239,25 @@ do
         DATABASES_TABLE_CHECK=1
         shift
     ;;
-        --config=*)
-            CONFIG_FILE=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        --chunk=*)
-            CONFIG_CHUNK=( "${i#*=}" )
-            shift # past argument=value
-        ;;
-        -v | --verbose)
-            VERBOSE=1
-            shift # past argument=value
-        ;;
-        -h | --help)
-            usage
-            exit
-        ;;
-        *)
+    --config=*)
+        CONFIG_FILE=( "${i#*=}" )
+        shift # past argument=value
+    ;;
+    --chunk=*)
+         CONFIG_CHUNK=( "${i#*=}" )
+         shift # past argument=value
+    ;;
+    -v | --verbose)
+         VERBOSE=1
+         shift # past argument=value
+    ;;
+    -h | --help)
+         usage
+         exit
+    ;;
+    *)
         # unknown option
-        ;;
+    ;;
     esac
 done
 
@@ -272,4 +271,4 @@ f_log "============================================"
 f_log ""
 
 # === AUTORUN ===
-restore $(pwd)
+restore $BACKUP_DIR
