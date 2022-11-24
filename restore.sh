@@ -110,7 +110,8 @@ restore()
                 f_log "Create tables in $DATABASE"
                 for TABLE in $tables; do
                     f_log "Create table: $DATABASE/$TABLE"
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE -e "SET foreign_key_checks = 0;
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
+                    SET foreign_key_checks = 0;
                     DROP TABLE IF EXISTS $TABLE;
                     SOURCE $RESTORE_DIR/$DATABASE/$TABLE.sql;
                     SET foreign_key_checks = 1;
