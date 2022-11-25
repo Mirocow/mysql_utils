@@ -162,22 +162,22 @@ restore()
 
                 if [ -f "$RESTORE_DIR/$DATABASE/__routines.sql" ]; then
                         f_log "Import routines into $DATABASE"
-                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__routines.sql 2>/dev/null
+                        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__routines.sql 2>/dev/null
                 fi
 
                 if [ -f "$RESTORE_DIR/$DATABASE/__views.sql" ]; then
                         f_log "Import views into $DATABASE"
-                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__views.sql 2>/dev/null
+                        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__views.sql 2>/dev/null
                 fi
 
                 if [ -f "$RESTORE_DIR/$DATABASE/__triggers.sql" ]; then
                         f_log "Import triggers into $DATABASE"
-                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__triggers.sql 2>/dev/null
+                        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__triggers.sql 2>/dev/null
                 fi
 
                 if [ -f "$RESTORE_DIR/$DATABASE/__events.sql" ]; then
                         f_log "Import events into $DATABASE"
-                        mysql --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__events.sql 2>/dev/null
+                        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/$DATABASE/__events.sql 2>/dev/null
                 fi
 
             fi
