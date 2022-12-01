@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # === CONFIG ===
-CONFIG_CHUNK=1000000
 VERBOSE=0
 CONVERT_INNODB="n"
 
@@ -202,9 +201,17 @@ usage: $0 options
 This script restore databases.
 
 OPTIONS:
-   -e      Exclude databases
-   -s      Selected databases
-   -c      Check innochecksum of table after import
+   -e               Exclude databases
+   -s               Selected databases
+   -c               Check innochecksum of table after import
+   --config         Path to configfile
+   --convert-innodb
+   --verbose
+   -h | --help      Usage
+
+Examples:
+        restore.sh --verbose
+
 
 
 EOF
@@ -248,10 +255,6 @@ do
         CONFIG_FILE=( "${i#*=}" )
         shift # past argument=value
     ;;
-    --chunk=*)
-         CONFIG_CHUNK=( "${i#*=}" )
-         shift # past argument=value
-    ;;
     --convert-innodb)
          CONVERT_INNODB="yes"
          shift # past argument=value
@@ -275,8 +278,9 @@ f_log "============================================"
 f_log "Restore from: $BACKUP_DIR"
 f_log "Config file: $CONFIG_FILE"
 f_log "Convert into InnoDB y/n: $CONVERT_INNODB"
-f_log "Verbose: $VERBOSE"
+f_log "Databse skip: $DATABASES_SKIP"
 f_log "Selected databases: $DATABASES_SELECTED"
+f_log "Verbose: $VERBOSE"
 f_log "============================================"
 f_log ""
 
