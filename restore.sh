@@ -3,6 +3,7 @@
 # === CONFIG ===
 CONFIG_CHUNK=1000000
 VERBOSE=0
+CONVERT_INNODB="n"
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -110,6 +111,9 @@ restore()
                 f_log "Create tables in $DATABASE"
                 for TABLE in $tables; do
                     f_log "Create table: $DATABASE/$TABLE"
+                    if [ $CONVERT_INNODB -eq "y" ]; then
+                        sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $RESTORE_DIR/$DATABASE/$TABLE.sql
+                    fi
                     mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
                     SET foreign_key_checks = 0;
                     DROP TABLE IF EXISTS $TABLE;
@@ -248,6 +252,10 @@ do
          CONFIG_CHUNK=( "${i#*=}" )
          shift # past argument=value
     ;;
+    --convert-innodb)
+         CONVERT_INNODB="yes"
+         shift # past argument=value
+    ;;
     -v | --verbose)
          VERBOSE=1
          shift # past argument=value
@@ -266,6 +274,7 @@ done
 f_log "============================================"
 f_log "Restore from: $BACKUP_DIR"
 f_log "Config file: $CONFIG_FILE"
+f_log "Convert into InnoDB y/n: $CONVERT_INNODB"
 f_log "Verbose: $VERBOSE"
 f_log "Selected databases: $DATABASES_SELECTED"
 f_log "============================================"
