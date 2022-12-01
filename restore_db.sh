@@ -70,7 +70,7 @@ restore()
     f_log "Create tables in $DATABASE"
     for TABLE in $tables; do
       f_log "Create table: $DATABASE/$TABLE"
-      if [ $CONVERT_INNODB -eq "y" ]; then
+      if [ $CONVERT_INNODB == "y" ]; then
           sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $RESTORE_DIR/$TABLE.sql
       fi
       mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
