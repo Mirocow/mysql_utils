@@ -62,6 +62,7 @@ restore()
 
     if [ -f $RESTORE_DIR/__create.sql ]; then
       f_log "Create database $DATABASE"
+      sed -i 's/CREATE DATABASE/CREATE DATABASE IF NOT EXISTS/' $RESTORE_DIR/__create.sql
       mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>/dev/null
     fi
 
@@ -73,6 +74,7 @@ restore()
       if [ $CONVERT_INNODB == "y" ]; then
           sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $RESTORE_DIR/$TABLE.sql
       fi
+
       mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
         SET foreign_key_checks = 0;
         DROP TABLE IF EXISTS $TABLE;

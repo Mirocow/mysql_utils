@@ -98,6 +98,7 @@ restore()
 
             if [ -f $RESTORE_DIR/$DATABASE/__create.sql ]; then
                 f_log "Create database $DATABASE"
+                sed -i 's/CREATE DATABASE/CREATE DATABASE IF NOT EXISTS/' $RESTORE_DIR/$DATABASE/__create.sql
                 mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/$DATABASE/__create.sql 2>/dev/null
             fi
 
