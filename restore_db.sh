@@ -98,8 +98,6 @@ restore()
         fi
 
         if [ -s "$RESTORE_DIR/$TABLE.txt" ]; then
-          f_log "+ $TABLE"
-
           mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
           SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
           SET foreign_key_checks = 0;
@@ -113,6 +111,7 @@ restore()
           SET unique_checks = 1;
           SET sql_log_bin = 1;
           "
+          f_log "+ $TABLE"
         fi
 
         if [ $DATABASES_TABLE_CHECK ]; then
