@@ -25,12 +25,12 @@ fi
 # === FUNCTION ===
 f_log()
 {
-    local bold=$(tput bold)
-    local yellow=$(tput setf 6)
-    local red=$(tput setf 4)
-    local green=$(tput setf 2)
-    local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)
+    # local bold=$(tput bold)
+    # local yellow=$(tput setf 6)
+    # local red=$(tput setf 4)
+    # local green=$(tput setf 2)
+    # local reset=$(tput sgr0)
+    # local toend=$(tput hpa $(tput cols))$(tput cub 6)
 
     logger "BACKUP: $@"
 
@@ -57,11 +57,6 @@ backup()
     f_log " START "
 
     query="SHOW databases;"
-
-    local default_databases_exclude=(
-    'information_schema'
-    'performance_schema'
-    )
 
     local array_views=()
 
@@ -101,8 +96,8 @@ backup()
     fi
 
     local default_tables_exclude=(
-    'slow_log'
-    'general_log'
+        'slow_log'
+        'general_log'
     )
 
     tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
