@@ -157,7 +157,7 @@ backup()
 
             if [ $COMPRESS ]; then
 
-                f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
+                f_log "  ** $COMPRESS $DATABASE/$TABLE.txt"
 
                 if [ $COMPRESS == 'bzip2' ]; then
 
