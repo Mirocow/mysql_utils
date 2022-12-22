@@ -58,12 +58,14 @@ restore()
 
   if [ $DATABASE ]; then
 
-    f_log "Found backup files $RESTORE_DIR"
+    touch $RESTORE_DIR/restore_error.log
+
+    f_log "Found restore files $RESTORE_DIR"
 
     if [ -f $RESTORE_DIR/__create.sql ]; then
       f_log "Create database $DATABASE"
       sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $RESTORE_DIR/__create.sql
-      mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>/dev/null
+      mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
     tables=$(ls -1 $RESTORE_DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
@@ -80,7 +82,7 @@ restore()
         DROP TABLE IF EXISTS $TABLE;
         SOURCE $RESTORE_DIR/$TABLE.sql;
         SET foreign_key_checks = 1;
-        "
+        " 2>> $RESTORE_DIR/restore_error.log
     done
 
     f_log "Import data into $DATABASE"
@@ -110,7 +112,7 @@ restore()
           SET foreign_key_checks = 1;
           SET unique_checks = 1;
           SET sql_log_bin = 1;
-          "
+          " 2>> $RESTORE_DIR/restore_error.log
           f_log "+ $TABLE"
         fi
 
@@ -128,22 +130,22 @@ restore()
 
     if [ -f "$RESTORE_DIR/__routines.sql" ]; then
         f_log "Import routines into $DATABASE"
-        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__routines.sql 2>/dev/null
+        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__routines.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
     if [ -f "$RESTORE_DIR/__views.sql" ]; then
         f_log "Import views into $DATABASE"
-        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__views.sql 2>/dev/null
+        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__views.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
     if [ -f "$RESTORE_DIR/__triggers.sql" ]; then
         f_log "Import triggers into $DATABASE"
-        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__triggers.sql 2>/dev/null
+        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__triggers.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
     if [ -f "$RESTORE_DIR/__events.sql" ]; then
         f_log "Import events into $DATABASE"
-        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__events.sql 2>/dev/null
+        mysql --force --defaults-file=$CONFIG_FILE $DATABASE < $RESTORE_DIR/__events.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
     f_log "Flush privileges;"
