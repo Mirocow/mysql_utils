@@ -68,6 +68,7 @@ backup()
 
     database_exclude=( ${default_databases_exclude[@]} ${EXCLUDE_DATABASES[@]} )
     database_exclude_expression=`prepaire_skip_expression "${database_exclude[@]}"`
+    
     f_log "Exclude databases: $database_exclude_expression"
 
     if [ ${#DATABASES[@]} -eq 0 ]; then

@@ -123,8 +123,6 @@ backup()
         command=" $command | egrep \"$tables_expression\""
     fi
 
-    f_log "Command: $command"
-
     for TABLE in $(eval $command); do
 
         f_log " ** Dump $DATABASE.$TABLE"
