@@ -322,7 +322,7 @@ if [ -d "$DSTOLD" ]; then
     rm -fr $DSTOLD;
 fi
 
-if [[ $(check_connection) -eq 1 ]]; then
+if check_connection -eq 1; then
     # === SETTINGS ===
     f_log "============================================"
     f_log "Dump into: $BACKUP_DIR"
