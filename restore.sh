@@ -9,6 +9,20 @@ CONVERT_INNODB="n"
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 # === FUNCTIONS ===
+check_connection()
+{
+    f_log "Checking MySQL connection..."
+    mysql --defaults-file=$CONFIG_FILE -e exit 2>/dev/null
+    dbstatus=`echo $?`
+    if [ $dbstatus -ne 0 ]; then
+        f_log "Fail!"
+        exit 1
+    fi
+
+    f_log "Success!"
+    return 1
+}
+
 database_exists()
 {
     query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
@@ -275,16 +289,18 @@ do
     esac
 done
 
-# === SETTINGS ===
-f_log "============================================"
-f_log "Restore from: $BACKUP_DIR"
-f_log "Config file: $CONFIG_FILE"
-f_log "Convert into InnoDB y/n: $CONVERT_INNODB"
-f_log "Databse skip: $DATABASES_SKIP"
-f_log "Selected databases: $DATABASES_SELECTED"
-f_log "Verbose: $VERBOSE"
-f_log "============================================"
-f_log ""
+if check_connection; then
+    # === SETTINGS ===
+    f_log "============================================"
+    f_log "Restore from: $BACKUP_DIR"
+    f_log "Config file: $CONFIG_FILE"
+    f_log "Convert into InnoDB y/n: $CONVERT_INNODB"
+    f_log "Databse skip: $DATABASES_SKIP"
+    f_log "Selected databases: $DATABASES_SELECTED"
+    f_log "Verbose: $VERBOSE"
+    f_log "============================================"
+    f_log ""
 
-# === AUTORUN ===
-restore $BACKUP_DIR
+    # === AUTORUN ===
+    restore $BACKUP_DIR
+fi

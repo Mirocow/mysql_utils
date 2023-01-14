@@ -15,14 +15,27 @@ CONFIG_FILE='/etc/mysql/debian.cnf'
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
-# === FUNCTIONS ===
 if [ -f '/etc/debian_version' ]; then
     CONFIG_FILE='/etc/mysql/debian.cnf'
 else
     CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
 fi
 
-# === FUNCTION ===
+# === FUNCTIONS ===
+check_connection()
+{
+    f_log "Checking MySQL connection..."
+    mysql --defaults-file=$CONFIG_FILE -e exit 2>/dev/null
+    dbstatus=`echo $?`
+    if [ $dbstatus -ne 0 ]; then
+        f_log "Fail!"
+        exit 1
+    fi
+
+    f_log "Success!"
+    return 1
+}
+
 f_log()
 {
     # local bold=$(tput bold)
@@ -300,18 +313,20 @@ if [ -d "$DSTOLD" ]; then
     rm -fr $DSTOLD;
 fi
 
-# === SETTINGS ===
-f_log "============================================"
-f_log "Dump into: $BACKUP_DIR"
-f_log "Config file: $CONFIG_FILE"
-f_log "Verbose: $VERBOSE"
-f_log "Compress: $COMPRESS"
-f_log "Database: $DATABASE"
-f_log "Tables: $TABLES"
-f_log "Exclude tables: $EXCLUDE_TABLES"
-f_log "Life time: $TIME_REMOVED_DUMP_FILES"
-f_log "============================================"
-f_log ""
+if check_connection; then
+    # === SETTINGS ===
+    f_log "============================================"
+    f_log "Dump into: $BACKUP_DIR"
+    f_log "Config file: $CONFIG_FILE"
+    f_log "Verbose: $VERBOSE"
+    f_log "Compress: $COMPRESS"
+    f_log "Database: $DATABASE"
+    f_log "Tables: $TABLES"
+    f_log "Exclude tables: $EXCLUDE_TABLES"
+    f_log "Life time: $TIME_REMOVED_DUMP_FILES"
+    f_log "============================================"
+    f_log ""
 
-# === AUTORUN ===
-backup
+    # === AUTORUN ===
+    backup
+fi
