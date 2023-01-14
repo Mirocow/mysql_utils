@@ -289,7 +289,7 @@ do
     esac
 done
 
-if check_connection -eq 1; then
+if check_connection; then
     # === SETTINGS ===
     f_log "============================================"
     f_log "Restore from: $BACKUP_DIR"
