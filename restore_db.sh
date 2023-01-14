@@ -20,7 +20,7 @@ check_connection()
     fi
 
     f_log "Success!"
-    return 1
+    return 0
 }
 
 database_exists()

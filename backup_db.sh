@@ -25,7 +25,7 @@ fi
 check_connection()
 {
     f_log "Checking MySQL connection..."
-    mysql --defaults-file=$CONFIG_FILE -e exit 2>/dev/null
+    mysql --defaults-file=$CONFIG_FILE -e ";" 2>/dev/null
     dbstatus=`echo $?`
     if [ $dbstatus -ne 0 ]; then
         f_log "Fail!"
@@ -33,7 +33,7 @@ check_connection()
     fi
 
     f_log "Success!"
-    return 1
+    return 0
 }
 
 f_log()
