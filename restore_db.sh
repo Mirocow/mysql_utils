@@ -44,6 +44,7 @@ contains ()
     done;
     return 1
 }
+
 f_log()
 {
     # local bold=$(tput bold)
