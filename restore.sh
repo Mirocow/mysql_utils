@@ -122,7 +122,7 @@ restore()
                 f_log "Error: Database $DATABASE dose not exists";
             else
 
-                tables=$(ls -1 $RESTORE_DIR/$DATABASE | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
+                tables=$(ls -1 $RESTORE_DIR/$DATABASE | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
                 f_log "Create tables in $DATABASE"
                 for TABLE in $tables; do

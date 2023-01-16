@@ -83,7 +83,7 @@ restore()
       mysql --defaults-file=$CONFIG_FILE < $RESTORE_DIR/__create.sql 2>> $RESTORE_DIR/restore_error.log
     fi
 
-    tables=$(ls -1 $RESTORE_DIR | grep -v __ | grep .sql | awk -F. '{print $1}' | sort | uniq)
+    tables=$(ls -1 $RESTORE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
     f_log "Create tables in $DATABASE"
     for TABLE in $tables; do
