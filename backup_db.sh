@@ -8,7 +8,7 @@ GROUP='mysql'
 DIRECTORYATTRIBUTES=0770
 FILEATTRIBUTES=640
 TIME_REMOVED_DUMP_FILES='1 week ago'
-BACKUP_DIR='/var/backups/mysql'
+DATABASE_DIR='/var/backups/mysql'
 CONFIG_FILE='/etc/mysql/debian.cnf'
 
 # === DO NOT EDIT BELOW THIS LINE ===
@@ -22,90 +22,49 @@ else
 fi
 
 # === FUNCTIONS ===
-check_connection()
-{
-    f_log "Checking MySQL connection..."
-    mysql --defaults-file=$CONFIG_FILE -e ";" 2>/dev/null
-    dbstatus=`echo $?`
-    if [ $dbstatus -ne 0 ]; then
-        f_log "Fail!"
-        exit 1
-    fi
-
-    f_log "Success!"
-    return 0
-}
-
-f_log()
-{
-    # local bold=$(tput bold)
-    # local yellow=$(tput setf 6)
-    # local red=$(tput setf 4)
-    # local green=$(tput setf 2)
-    # local reset=$(tput sgr0)
-    # local toend=$(tput hpa $(tput cols))$(tput cub 6)
-
-    logger "BACKUP: $@"
-
-    if [ $VERBOSE -eq 1 ]; then
-        echo "BACKUP: $@"
-    fi
-}
-
-prepaire_skip_expression()
-{
-    local array_skip=( "${@}" )
-    for skip in "${array_skip[@]}"; do
-        if [ -x $return ]; then
-            local return="^$skip\$"
-        else
-            return="$return|^$skip\$"
-        fi
-    done
-    echo ${return}
-}
+source functions.sh
 
 backup()
 {
-    f_log " START "
+    log "BACKUP: START "
 
     query="SHOW databases;"
 
     local array_views=()
 
-    mkdir -p $BACKUP_DIR/$DATABASE 2>/dev/null 1>&2
-    chown $USER:$GROUP $BACKUP_DIR/$DATABASE
-    chmod $DIRECTORYATTRIBUTES $BACKUP_DIR/$DATABASE
-    touch $BACKUP_DIR/$DATABASE/backup_error.log
+    mkdir -p $DATABASE_DIR/$DATABASE 2>/dev/null 1>&2
+    chown $USER:$GROUP $DATABASE_DIR/$DATABASE
+    chmod $DIRECTORYATTRIBUTES $DATABASE_DIR/$DATABASE
+    touch $DATABASE_DIR/$DATABASE/backup_error.log
 
     query="SHOW CREATE DATABASE \`$DATABASE\`;"
-    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $BACKUP_DIR/$DATABASE/__create.sql 2>> $BACKUP_DIR/$DATABASE/backup_error.log
-    if [ -f $BACKUP_DIR/$DATABASE/__create.sql ]; then
-        f_log "  > Export create"
+    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/backup_error.log
+    if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
+        log "BACKUP:  > Export create"
     fi
 
     query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
     for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-        mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $BACKUP_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $BACKUP_DIR/$DATABASE/__views.sql
+        mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName 2>> $DATABASE_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' >> $DATABASE_DIR/$DATABASE/__views.sql
         array_views+=($viewName)
     done
-    if [ -f $BACKUP_DIR/$DATABASE/__views.sql ]; then
-        f_log "  > Exports views"
+    if [ -f $DATABASE_DIR/$DATABASE/__views.sql ]; then
+        log "BACKUP:  > Exports views"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__routines.sql
-    if [ -f $BACKUP_DIR/$DATABASE/__routines.sql ]; then
-        f_log "  > Exporting Routines"
+    mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DATABASE_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__routines.sql
+    if [ -f $DATABASE_DIR/$DATABASE/__routines.sql ]; then
+        log "BACKUP:  > Exporting Routines"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__triggers.sql
-    if [ -f $BACKUP_DIR/$DATABASE/__triggers.sql ]; then
-        f_log "  > Exporting Triggers"
+    mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DATABASE_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__triggers.sql
+    if [ -f $DATABASE_DIR/$DATABASE/__triggers.sql ]; then
+        log "BACKUP:  > Exporting Triggers"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $BACKUP_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $BACKUP_DIR/$DATABASE/__events.sql
-    if [ -f $BACKUP_DIR/$DATABASE/__events.sql ]; then
-        f_log "  > Exporting Events"
+    mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DATABASE_DIR/$DATABASE/backup_error.log | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__events.sql
+    if [ -f $DATABASE_DIR/$DATABASE/__events.sql ]; then
+        log "BACKUP:  > Exporting Events"
     fi
 
     local default_tables_exclude=(
@@ -115,15 +74,15 @@ backup()
 
     tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
     tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
-    f_log "Exclude tables: $tables_exclude_expression"
+    log "BACKUP: Exclude tables: $tables_exclude_expression"
 
     data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
     data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
-    f_log "Exclude data tables: $data_tables_exclude_expression"
+    log "BACKUP: Exclude data tables: $data_tables_exclude_expression"
 
     tables=( ${TABLES[@]} )
     tables_expression=$(prepaire_skip_expression "${tables[@]}")
-    f_log "Only tables: $tables_expression"
+    log "BACKUP: Only tables: $tables_expression"
 
     query="SHOW TABLES;"
     command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
@@ -138,65 +97,65 @@ backup()
 
     for TABLE in $(eval $command); do
 
-        f_log " ** Dump $DATABASE.$TABLE"
+        log "BACKUP: ** Dump $DATABASE.$TABLE"
 
         if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
-            f_log "Exclude data from table $TABLE"
-            mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/backup_error.log
+            log "BACKUP: Exclude data from table $TABLE"
+            mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE 2>> $DATABASE_DIR/$DATABASE/backup_error.log
         else
             # If fields has geospatial types
             checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
             hasGeo=$(eval $checkGeo)
             if [ ! -z "$hasGeo" ]; then
-                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$BACKUP_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/backup_error.log
+                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$DATABASE_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DATABASE_DIR/$DATABASE/backup_error.log
             else
-                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$BACKUP_DIR/$DATABASE/ $DATABASE $TABLE 2>> $BACKUP_DIR/$DATABASE/backup_error.log
+                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE 2>> $DATABASE_DIR/$DATABASE/backup_error.log
             fi
         fi
 
-        sed -i 's/AUTO_INCREMENT=[0-9]*\b//' $BACKUP_DIR/$DATABASE/$TABLE.sql
+        sed -i 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
 
-        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.sql" ]; then
-            chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.sql
-            chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.sql
-            f_log "  ** set perm on $DATABASE/$TABLE.sql"
+        if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
+            chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql
+            chown $USER:$GROUP $DATABASE_DIR/$DATABASE/$TABLE.sql
+            log "BACKUP:  ** set perm on $DATABASE/$TABLE.sql"
         else
-            f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.sql not found"
+            log "BACKUP:  ** WARNING : $DATABASE_DIR/$DATABASE/$TABLE.sql not found"
         fi
 
-        if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt" ]; then
+        if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
 
             if [ $COMPRESS ]; then
 
-                f_log "  ** $COMPRESS $DATABASE/$TABLE.txt"
+                log "BACKUP:  ** $COMPRESS $DATABASE/$TABLE.txt"
 
                 if [ $COMPRESS == 'bzip2' ]; then
 
-                    if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
-                        rm $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2
+                    if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
+                        rm $DATABASE_DIR/$DATABASE/$TABLE.txt.bz2
                     fi
 
-                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.bz2) &
+                    ($COMPRESS $DATABASE_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $DATABASE_DIR/$DATABASE/$TABLE.txt.bz2) &
 
                 elif [ $COMPRESS == 'gzip' ]; then
 
-                    if [ -f "$BACKUP_DIR/$DATABASE/$TABLE.txt.gz" ]; then
-                        rm $BACKUP_DIR/$DATABASE/$TABLE.txt.gz
+                    if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt.gz" ]; then
+                        rm $DATABASE_DIR/$DATABASE/$TABLE.txt.gz
                     fi
 
-                    ($COMPRESS $BACKUP_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $BACKUP_DIR/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $BACKUP_DIR/$DATABASE/$TABLE.txt.gz) &
+                    ($COMPRESS $DATABASE_DIR/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $DATABASE_DIR/$DATABASE/$TABLE.txt.gz) &
 
                 fi
 
             fi
 
         else
-            f_log "  ** WARNING : $BACKUP_DIR/$DATABASE/$TABLE.txt not found"
+            log "BACKUP:  ** WARNING : $DATABASE_DIR/$DATABASE/$TABLE.txt not found"
         fi
 
     done
 
-    f_log " END "
+    log "BACKUP: END "
 }
 
 usage()
@@ -277,7 +236,7 @@ do
             shift # past argument=value
         ;;
         --dir=*)
-            BACKUP_DIR=( "${i#*=}" )
+            DATABASE_DIR=( "${i#*=}" )
             shift # past argument=value
         ;;
         --config=*)
@@ -300,32 +259,34 @@ done
 
 DATE=`date '+%Y.%m.%d'`
 DATEOLD=`date --date="$TIME_REMOVED_DUMP_FILES" +%Y.%m.%d`
-BACKUP_DIR=$BACKUP_DIR/$DATE
-DSTOLD=$BACKUP_DIR/$DATEOLD
-
-if [ ! -d "$BACKUP_DIR" ]; then
-    mkdir -p $BACKUP_DIR;
-    chmod $DIRECTORYATTRIBUTES $BACKUP_DIR;
-    chown $USER:$GROUP $BACKUP_DIR;
-fi
-
-if [ -d "$DSTOLD" ]; then
-    rm -fr $DSTOLD;
-fi
+DATABASE_DIR=$DATABASE_DIR/$DATE
+DSTOLD=$DATABASE_DIR/$DATEOLD
 
 if check_connection; then
+    if [ ! -d "$DATABASE_DIR" ]; then
+        mkdir -p $DATABASE_DIR;
+        chmod $DIRECTORYATTRIBUTES $DATABASE_DIR;
+        chown $USER:$GROUP $DATABASE_DIR;
+    fi
+
+    if [ -d "$DSTOLD" ]; then
+        rm -fr $DSTOLD;
+    fi
+
     # === SETTINGS ===
-    f_log "============================================"
-    f_log "Dump into: $BACKUP_DIR"
-    f_log "Config file: $CONFIG_FILE"
-    f_log "Verbose: $VERBOSE"
-    f_log "Compress: $COMPRESS"
-    f_log "Database: $DATABASE"
-    f_log "Tables: $TABLES"
-    f_log "Exclude tables: $EXCLUDE_TABLES"
-    f_log "Life time: $TIME_REMOVED_DUMP_FILES"
-    f_log "============================================"
-    f_log ""
+    log "BACKUP: ============================================"
+    log "BACKUP: Dump into: $DATABASE_DIR"
+    log "BACKUP: Config file: $CONFIG_FILE"
+    log "BACKUP: Verbose: $VERBOSE"
+    log "BACKUP: Compress: $COMPRESS"
+    log "BACKUP: Database: $DATABASE"
+    log "BACKUP: Tables: $TABLES"
+    log "BACKUP: Exclude tables: $EXCLUDE_TABLES"
+    log "BACKUP: Life time: $TIME_REMOVED_DUMP_FILES"
+    log "BACKUP: ============================================"
+    log "BACKUP: "
+
+    lockfile "$DATABASE_DIR/$DATABASE"
 
     # === AUTORUN ===
     backup
