@@ -42,7 +42,7 @@ restore()
 
         DATABASE=$(basename $i)
 
-        lockfile "$DATABASE_DIR/$DATABASE"
+        lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
         touch $DATABASE_DIR/$DATABASE/restore_error.log
 
@@ -154,6 +154,7 @@ restore()
 
             fi
         fi
+
     done
 
     log "RESTORE: Flush privileges;"

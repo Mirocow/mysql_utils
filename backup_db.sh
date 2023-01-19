@@ -286,7 +286,7 @@ if check_connection; then
     log "BACKUP: ============================================"
     log "BACKUP: "
 
-    lockfile "$DATABASE_DIR/$DATABASE"
+    lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
     # === AUTORUN ===
     backup

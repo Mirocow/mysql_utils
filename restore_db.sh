@@ -207,7 +207,7 @@ if check_connection; then
   log "RESTORE: ============================================"
   log "RESTORE: "
 
-  lockfile "$DATABASE_DIR"
+  lockfile "$DATABASE_DIR/lockfile.lock"
 
   # === AUTORUN ===
   restore $DATABASE_DIR

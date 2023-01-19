@@ -79,16 +79,22 @@ contains ()
     return 1
 }
 
+mutex() {
+    local file=$1 pid pids
+
+    exec 9>>"$file"
+    { pids=$(fuser -f "$file"); } 2>&- 9>&-
+    for pid in $pids; do
+        [[ $pid = $$ ]] && continue
+
+        exec 9>&-
+        return 1 # Locked by a pid.
+    done
+}
+
 lockfile()
 {
-    lockfile="$@/lockfile.lock"
-    if (set -o noclobber; echo "$$" > "$lockfile") 2> /dev/null; then
-        trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
-        # Your code here
-        rm -f "$lockfile"
-        trap - INT TERM EXIT
-    else
-        log "Failed to acquire $lockfile. Held by $(cat $lockfile)"
-        exit 1;
-    fi
+    local lockfile="$1"
+    mutex "${lockfile}" || { echo "Already running." >&2; exit 1; }
+    trap "rm -rf ${lockfile}" QUIT INT TERM EXIT
 }

@@ -48,7 +48,7 @@ backup()
 
     for DATABASE in $DATABASES; do
 
-        lockfile "$DATABASE_DIR/$DATABASE"
+        lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
         mkdir -p $DATABASE_DIR/$DATABASE 2>/dev/null 1>&2
         chown $USER:$GROUP $DATABASE_DIR/$DATABASE
@@ -158,7 +158,7 @@ backup()
             fi
 
         done
-
+        
     done
 
     log "BACKUP: END "
