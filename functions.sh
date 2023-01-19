@@ -81,7 +81,7 @@ contains ()
 
 lockfile()
 {
-    lockfile="$@/lock"
+    lockfile="$@/lockfile.lock"
     if (set -o noclobber; log "$$" > "$lockfile") 2> /dev/null; then
         trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
         # Your code here
