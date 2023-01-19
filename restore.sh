@@ -10,7 +10,7 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
 
 # === FUNCTIONS ===
-source ./functions.sh
+source $(dirname "$0")/functions.sh
 
 restore()
 {

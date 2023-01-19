@@ -22,7 +22,7 @@ else
 fi
 
 # === FUNCTIONS ===
-source ./functions.sh
+source $(dirname "$0")/functions.sh
 
 backup()
 {

@@ -90,5 +90,5 @@ lockfile()
     else
         log "Failed to acquire $lockfile. Held by $(cat $lockfile)"
         exit 1;
-    then
+    fi
 }
