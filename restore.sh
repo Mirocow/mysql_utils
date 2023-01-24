@@ -44,7 +44,7 @@ restore()
 
         lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
-        touch $DATABASE_DIR/$DATABASE/restore_error.log
+        :> $DATABASE_DIR/$DATABASE/restore_error.log
 
         if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
             if ! contains $DATABASE "${DATABASES_SELECTED[@]}"; then

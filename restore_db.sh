@@ -24,7 +24,7 @@ restore()
 
     if [ $DATABASE ]; then
 
-      touch $DATABASE_DIR/restore_error.log
+      :> $DATABASE_DIR/restore_error.log
 
       log "RESTORE: Found restore files $DATABASE_DIR"
 
