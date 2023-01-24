@@ -2,6 +2,7 @@
 
 # === CONFIG ===
 VERBOSE=0
+LOAD_DATA_LOCAL_INFILE=0
 CONVERT_INNODB="n"
 
 # === DO NOT EDIT BELOW THIS LINE ===
@@ -105,13 +106,20 @@ restore()
                     fi
 
                     if [ -s "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
+
+                        OPERATOR='LOAD DATA INFILE'
+                        if [ $LOAD_DATA_LOCAL_INFILE -eq 1  ]; then
+                            OPERATOR='LOAD DATA LOCAL INFILE'
+                        fi
+
                         mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                         SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                         SET foreign_key_checks = 0;
                         SET unique_checks = 0;
                         SET sql_log_bin = 0;
                         SET autocommit = 0;
-                        LOAD DATA LOCAL INFILE '$DATABASE_DIR/$DATABASE/$TABLE.txt' INTO TABLE $TABLE;
+                        START TRANSACTION;
+                        ${OPERATOR} '$DATABASE_DIR/$DATABASE/$TABLE.txt' INTO TABLE $TABLE;
                         COMMIT;
                         SET autocommit=1;
                         SET foreign_key_checks = 1;
@@ -229,6 +237,10 @@ do
          CONVERT_INNODB="yes"
          shift # past argument=value
     ;;
+    -l | --local)
+         LOAD_DATA_LOCAL_INFILE=1
+         shift # past argument=value
+    ;;
     -v | --verbose)
          VERBOSE=1
          shift # past argument=value
@@ -247,6 +259,7 @@ if check_connection; then
     # === SETTINGS ===
     log "RESTORE: ============================================"
     log "RESTORE: Restore from: $DATABASE_DIR"
+    log "RESTORE: Load from local y/n: $LOAD_DATA_LOCAL_INFILE"
     log "RESTORE: Config file: $CONFIG_FILE"
     log "RESTORE: Convert into InnoDB y/n: $CONVERT_INNODB"
     log "RESTORE: Databse skip: $DATABASES_SKIP"
