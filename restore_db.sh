@@ -80,7 +80,7 @@ restore()
             SET sql_log_bin = 0;
             SET autocommit = 0;
             START TRANSACTION;
-            ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE;
+            ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
             COMMIT;
             SET autocommit=1;
             SET foreign_key_checks = 1;
