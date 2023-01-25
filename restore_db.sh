@@ -3,7 +3,7 @@
 # === CONFIG ===
 VERBOSE=0
 LOAD_DATA_LOCAL_INFILE=0
-CONVERT_INNODB="n"
+CONVERT_INNODB=0
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -40,7 +40,7 @@ restore()
       log "RESTORE: Create tables in $DATABASE"
       for TABLE in $tables; do
         log "RESTORE: Create table: $DATABASE/$TABLE"
-        if [ $CONVERT_INNODB == "y" ]; then
+        if [ $CONVERT_INNODB -eq 1  ]; then
             sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
         fi
 
@@ -73,7 +73,7 @@ restore()
               OPERATOR='LOAD DATA LOCAL INFILE'
             fi
 
-            mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
             SET foreign_key_checks = 0;
             SET unique_checks = 0;
@@ -86,8 +86,13 @@ restore()
             SET foreign_key_checks = 1;
             SET unique_checks = 1;
             SET sql_log_bin = 1;
-            " 2>> $DATABASE_DIR/restore_error.log
-            log "RESTORE: + $TABLE"
+            " 2>> $DATABASE_DIR/restore_error.log)
+            if [ $error -ne '' ]; then
+              log "RESTORE: - $TABLE ($error)"
+            else
+              log "RESTORE: + $TABLE"
+            fi
+
           fi
 
           if [ $DATABASES_TABLE_CHECK ]; then
@@ -187,8 +192,8 @@ do
         CONFIG_FILE=( "${i#*=}" )
         shift # past argument=value
     ;;
-    --convert-innodb=*)
-         CONVERT_INNODB=( "${i#*=}" )
+    --convert-innodb)
+         CONVERT_INNODB=1
          shift # past argument=value
     ;;
     -l | --local)
@@ -213,9 +218,10 @@ if check_connection; then
   # === SETTINGS ===
   log "RESTORE: ============================================"
   log "RESTORE: Restore from: $DATABASE_DIR"
-  log "RESTORE: Load from local y/n: $LOAD_DATA_LOCAL_INFILE"
   log "RESTORE: Config file: $CONFIG_FILE"
-  log "RESTORE: Convert into InnoDB y/n: $CONVERT_INNODB"
+  log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
+  log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
+  log "RESTORE: Check database table y/n (default n): $DATABASES_TABLE_CHECK"
   log "RESTORE: Verbose: $VERBOSE"
   log "RESTORE: ============================================"
   log "RESTORE: "

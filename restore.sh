@@ -112,7 +112,7 @@ restore()
                             OPERATOR='LOAD DATA LOCAL INFILE'
                         fi
 
-                        mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                        error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                         SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                         SET foreign_key_checks = 0;
                         SET unique_checks = 0;
@@ -125,8 +125,13 @@ restore()
                         SET foreign_key_checks = 1;
                         SET unique_checks = 1;
                         SET sql_log_bin = 1;
-                        " 2>> $DATABASE_DIR/$DATABASE/restore_error.log
-                        log "RESTORE: + $TABLE"
+                        " 2>> $DATABASE_DIR/restore_error.log)
+                        if [ $error -ne '' ]; then
+                            log "RESTORE: - $TABLE ($error)"
+                        else
+                            log "RESTORE: + $TABLE"
+                        fi
+
                     fi
 
                     if [ $DATABASES_TABLE_CHECK ]; then
