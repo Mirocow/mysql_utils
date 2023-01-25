@@ -56,7 +56,7 @@ backup()
         touch $DATABASE_DIR/$DATABASE/backup_error.log
 
         query="SHOW CREATE DATABASE \`$DATABASE\`;"
-        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/backup_error.log
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/backup_error.log
         if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
             log "BACKUP: > Export create"
         fi

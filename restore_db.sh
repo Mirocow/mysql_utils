@@ -68,7 +68,7 @@ restore()
 
           if [ -s "$DATABASE_DIR/$TABLE.txt" ]; then
 
-            OPERATOR='LOAD DATA INFILE'
+            OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
             if [ $LOAD_DATA_LOCAL_INFILE -eq 1  ]; then
               OPERATOR='LOAD DATA LOCAL INFILE'
             fi
@@ -80,7 +80,7 @@ restore()
             SET sql_log_bin = 0;
             SET autocommit = 0;
             START TRANSACTION;
-            ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' INTO TABLE $TABLE;
+            ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE;
             COMMIT;
             SET autocommit=1;
             SET foreign_key_checks = 1;
