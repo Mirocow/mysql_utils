@@ -25,116 +25,107 @@ restore()
 
     if [ $DATABASE ]; then
 
-      :> $DATABASE_DIR/restore_error.log
+            :> $DATABASE_DIR/restore_error.log
 
-      log "RESTORE: Found restore files $DATABASE_DIR"
+            log "RESTORE: Found restore files $DATABASE_DIR"
 
-      if [ -f $DATABASE_DIR/__create.sql ]; then
+            if [ -f $DATABASE_DIR/__create.sql ]; then
         log "RESTORE: Create database $DATABASE if not exists"
         sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
         mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
-      fi
+            fi
 
-      tables=$(ls -1 $DATABASE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
+            tables=$(ls -1 $DATABASE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
-      log "RESTORE: Create tables in $DATABASE"
-      for TABLE in $tables; do
+            log "RESTORE: Create tables in $DATABASE"
+            for TABLE in $tables; do
         log "RESTORE: Create table: $DATABASE/$TABLE"
-        if [ $CONVERT_INNODB -eq 1  ]; then
+        if [ $CONVERT_INNODB -eq 1 ]; then
             sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
         fi
 
         mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
-          SET foreign_key_checks = 0;
-          DROP TABLE IF EXISTS $TABLE;
-          SOURCE $DATABASE_DIR/$TABLE.sql;
-          SET foreign_key_checks = 1;
-          " 2>> $DATABASE_DIR/restore_error.log
-      done
+                SET foreign_key_checks = 0;
+                DROP TABLE IF EXISTS $TABLE;
+                SOURCE $DATABASE_DIR/$TABLE.sql;
+                SET foreign_key_checks = 1;
+                " 2>> $DATABASE_DIR/restore_error.log
+            done
 
-      log "RESTORE: Import data into $DATABASE"
-      for TABLE in $tables; do
+            log "RESTORE: Import data into $DATABASE"
+            for TABLE in $tables; do
 
-          log "RESTORE: Import data into $DATABASE/$TABLE"
+                log "RESTORE: Import data into $DATABASE/$TABLE"
 
-          if [ -f "$DATABASE_DIR/$TABLE.txt.bz2" ]; then
-            log "RESTORE: < $TABLE"
-            if [ -f "$DATABASE_DIR/$TABLE.txt" ]; then
-              log "RESTORE: Delete source: $TABLE.txt"
-              rm $DATABASE_DIR/$TABLE.txt
+                if [ -f "$DATABASE_DIR/$TABLE.txt.bz2" ]; then
+                    log "RESTORE: < $TABLE"
+                    if [ -f "$DATABASE_DIR/$TABLE.txt" ]; then
+                        log "RESTORE: Delete source: $TABLE.txt"
+                        rm $DATABASE_DIR/$TABLE.txt
+                    fi
+                    bunzip2 -k $DATABASE_DIR/$TABLE.txt.bz2
+                fi
+
+                if [ -s "$DATABASE_DIR/$TABLE.txt" ]; then
+
+                    OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
+                    if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
+                        OPERATOR='LOAD DATA LOCAL INFILE'
+                    fi
+
+                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                    SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+                    SET foreign_key_checks = 0;
+                    SET unique_checks = 0;
+                    SET sql_log_bin = 0;
+                    SET autocommit = 0;
+                    START TRANSACTION;
+                    ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+                    COMMIT;
+                    SET autocommit=1;
+                    SET foreign_key_checks = 1;
+                    SET unique_checks = 1;
+                    SET sql_log_bin = 1;
+                    " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+
+                    if [[ -z "$error" ]]; then
+                        log "RESTORE: + $TABLE"
+                    else
+                        log "RESTORE: - $TABLE ($error)"
+                    fi
+
+                fi
+
+            done
+
+            if [ -f "$DATABASE_DIR/__routines.sql" ]; then
+                log "RESTORE: Import routines into $DATABASE"
+                mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__routines.sql 2>> $DATABASE_DIR/restore_error.log
             fi
-            bunzip2 -k $DATABASE_DIR/$TABLE.txt.bz2
-          fi
 
-          if [ -s "$DATABASE_DIR/$TABLE.txt" ]; then
-
-            OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
-            if [ $LOAD_DATA_LOCAL_INFILE -eq 1  ]; then
-              OPERATOR='LOAD DATA LOCAL INFILE'
+            if [ -f "$DATABASE_DIR/__views.sql" ]; then
+                log "RESTORE: Import views into $DATABASE"
+                mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__views.sql 2>> $DATABASE_DIR/restore_error.log
             fi
 
-            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
-            SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
-            SET foreign_key_checks = 0;
-            SET unique_checks = 0;
-            SET sql_log_bin = 0;
-            SET autocommit = 0;
-            START TRANSACTION;
-            ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
-            COMMIT;
-            SET autocommit=1;
-            SET foreign_key_checks = 1;
-            SET unique_checks = 1;
-            SET sql_log_bin = 1;
-            " 2>> $DATABASE_DIR/restore_error.log)
-            if [[ -z "$error" ]]; then
-                log "RESTORE: + $TABLE"
-            else
-                log "RESTORE: - $TABLE ($error)"
+            if [ -f "$DATABASE_DIR/__triggers.sql" ]; then
+                log "RESTORE: Import triggers into $DATABASE"
+                mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__triggers.sql 2>> $DATABASE_DIR/restore_error.log
             fi
 
-          fi
-
-          if [ $DATABASES_TABLE_CHECK ]; then
-            if [ -f "$DATABASE_DIR/$TABLE.ibd" ]; then
-              if [ ! $(innochecksum $DATABASE_DIR/$TABLE.ibd) ]; then
-                log "RESTORE: $TABLE [OK]"
-              else
-                log "RESTORE: $TABLE [ERR]"
-              fi
+            if [ -f "$DATABASE_DIR/__events.sql" ]; then
+                log "RESTORE: Import events into $DATABASE"
+                mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__events.sql 2>> $DATABASE_DIR/restore_error.log
             fi
-          fi
 
-      done
+            log "RESTORE: Flush privileges;"
+            mysql --defaults-file=$CONFIG_FILE -e "flush privileges;"
 
-      if [ -f "$DATABASE_DIR/__routines.sql" ]; then
-          log "RESTORE: Import routines into $DATABASE"
-          mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__routines.sql 2>> $DATABASE_DIR/restore_error.log
-      fi
-
-      if [ -f "$DATABASE_DIR/__views.sql" ]; then
-          log "RESTORE: Import views into $DATABASE"
-          mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__views.sql 2>> $DATABASE_DIR/restore_error.log
-      fi
-
-      if [ -f "$DATABASE_DIR/__triggers.sql" ]; then
-          log "RESTORE: Import triggers into $DATABASE"
-          mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__triggers.sql 2>> $DATABASE_DIR/restore_error.log
-      fi
-
-      if [ -f "$DATABASE_DIR/__events.sql" ]; then
-          log "RESTORE: Import events into $DATABASE"
-          mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__events.sql 2>> $DATABASE_DIR/restore_error.log
-      fi
-
-      log "RESTORE: Flush privileges;"
-      mysql --defaults-file=$CONFIG_FILE -e "flush privileges;"
-
-      log "RESTORE: ** END **"
+            log "RESTORE: ** END **"
 
     else
 
-      log "RESTORE: Database not found"
+            log "RESTORE: Database not found"
 
     fi
 }
@@ -147,11 +138,10 @@ usage: $0 options
 This script restore databases.
 
 OPTIONS:
-   -c               Check innochecksum of table after import
-   --config         Path to configfile
-   --convert-innodb
-   --verbose
-   -h | --help      Usage
+         --config         Path to configfile
+         --convert-innodb
+         --verbose
+         -h | --help            Usage
 
 Examples:
         restore_db.sh --verbose
@@ -184,10 +174,6 @@ done
 for i in "$@"
 do
     case $i in
-    -c)
-        DATABASES_TABLE_CHECK=1
-        shift
-    ;;
     --config=*)
         CONFIG_FILE=( "${i#*=}" )
         shift # past argument=value
@@ -215,19 +201,19 @@ do
 done
 
 if check_connection; then
-  # === SETTINGS ===
-  log "RESTORE: ============================================"
-  log "RESTORE: Restore from: $DATABASE_DIR"
-  log "RESTORE: Config file: $CONFIG_FILE"
-  log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
-  log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
-  log "RESTORE: Check database table y/n (default n): $DATABASES_TABLE_CHECK"
-  log "RESTORE: Verbose: $VERBOSE"
-  log "RESTORE: ============================================"
-  log "RESTORE: "
+    # === SETTINGS ===
+    log "RESTORE: ============================================"
+    log "RESTORE: Restore from: $DATABASE_DIR"
+    log "RESTORE: Config file: $CONFIG_FILE"
+    log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
+    log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
+    log "RESTORE: Check database table y/n (default n): $DATABASES_TABLE_CHECK"
+    log "RESTORE: Verbose: $VERBOSE"
+    log "RESTORE: ============================================"
+    log "RESTORE: "
 
-  lockfile "$DATABASE_DIR/lockfile.lock"
+    lockfile "$DATABASE_DIR/lockfile.lock"
 
-  # === AUTORUN ===
-  restore $DATABASE_DIR
+    # === AUTORUN ===
+    restore $DATABASE_DIR
 fi

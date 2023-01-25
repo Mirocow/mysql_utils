@@ -94,6 +94,7 @@ restore()
 
                 log "RESTORE: Import data into $DATABASE"
                 for TABLE in $tables; do
+
                     log "RESTORE: Import data into $DATABASE/$TABLE"
 
                     if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
@@ -125,7 +126,8 @@ restore()
                         SET foreign_key_checks = 1;
                         SET unique_checks = 1;
                         SET sql_log_bin = 1;
-                        " 2>> $DATABASE_DIR/restore_error.log)
+                        " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+                        
                         if [[ -z "$error" ]]; then
                             log "RESTORE: + $TABLE"
                         else
@@ -134,15 +136,6 @@ restore()
 
                     fi
 
-                    if [ $DATABASES_TABLE_CHECK ]; then
-                        if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.ibd" ]; then
-                            if [ ! $(innochecksum $DATABASE_DIR/$DATABASE/$TABLE.ibd) ]; then
-                                log "RESTORE: $TABLE [OK]"
-                            else
-                                log "RESTORE: $TABLE [ERR]"
-                            fi
-                        fi
-                    fi
                 done
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__routines.sql" ]; then
@@ -186,7 +179,6 @@ This script restore databases.
 OPTIONS:
    -e               Exclude databases
    -s               Selected databases
-   -c               Check innochecksum of table after import
    --config         Path to configfile
    --convert-innodb
    --verbose
@@ -230,10 +222,6 @@ do
         DATABASES_SELECTED=( "${i#*=}" )
         shift
     ;;
-    -c)
-        DATABASES_TABLE_CHECK=1
-        shift
-    ;;
     --config=*)
         CONFIG_FILE=( "${i#*=}" )
         shift # past argument=value
@@ -267,7 +255,6 @@ if check_connection; then
     log "RESTORE: Config file: $CONFIG_FILE"
     log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
     log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
-    log "RESTORE: Check database table y/n (default n): $DATABASES_TABLE_CHECK"
     log "RESTORE: Databse skip: $DATABASES_SKIP"
     log "RESTORE: Selected databases: $DATABASES_SELECTED"
     log "RESTORE: Verbose: $VERBOSE"
