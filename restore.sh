@@ -130,6 +130,7 @@ restore()
                         START TRANSACTION;
                         $OPERATOR '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                         COMMIT;
+                        UNLOCK TABLES;
                         SET autocommit=1;
                         SET foreign_key_checks = 1;
                         SET unique_checks = 1;
