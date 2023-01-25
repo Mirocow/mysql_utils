@@ -30,26 +30,32 @@ restore()
             log "RESTORE: Found restore files $DATABASE_DIR"
 
             if [ -f $DATABASE_DIR/__create.sql ]; then
-        log "RESTORE: Create database $DATABASE if not exists"
-        sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
-        mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
+                log "RESTORE: Create database $DATABASE if not exists"
+                sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
+                mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
             fi
 
             tables=$(ls -1 $DATABASE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
 
             log "RESTORE: Create tables in $DATABASE"
             for TABLE in $tables; do
-        log "RESTORE: Create table: $DATABASE/$TABLE"
-        if [ $CONVERT_INNODB -eq 1 ]; then
-            sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
-        fi
 
-        mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
-                SET foreign_key_checks = 0;
-                DROP TABLE IF EXISTS $TABLE;
-                SOURCE $DATABASE_DIR/$TABLE.sql;
-                SET foreign_key_checks = 1;
-                " 2>> $DATABASE_DIR/restore_error.log
+                log "RESTORE: Create table: $DATABASE/$TABLE"
+                if [ $CONVERT_INNODB -eq 1 ]; then
+                    sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
+                fi
+
+                error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
+                        SET foreign_key_checks = 0;
+                        DROP TABLE IF EXISTS $TABLE;
+                        SOURCE $DATABASE_DIR/$TABLE.sql;
+                        SET foreign_key_checks = 1;
+                        " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+
+                if [[ ! -z "$error" ]]; then
+                    log "Rise error: $error"
+                fi
+
             done
 
             log "RESTORE: Import data into $DATABASE"
@@ -74,13 +80,15 @@ restore()
                     fi
 
                     error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                    SET SESSION net_buffer_length=1000000;
+                    SET SESSION max_allowed_packet=1000000000;
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                     SET foreign_key_checks = 0;
                     SET unique_checks = 0;
                     SET sql_log_bin = 0;
                     SET autocommit = 0;
                     START TRANSACTION;
-                    ${OPERATOR} '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+                    $OPERATOR '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                     COMMIT;
                     SET autocommit=1;
                     SET foreign_key_checks = 1;
@@ -91,7 +99,8 @@ restore()
                     if [[ -z "$error" ]]; then
                         log "RESTORE: + $TABLE"
                     else
-                        log "RESTORE: - $TABLE ($error)"
+                        log "RESTORE: - $TABLE"
+                        log "Rise error: $error"
                     fi
 
                 fi

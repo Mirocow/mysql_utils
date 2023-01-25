@@ -84,12 +84,17 @@ restore()
                     if [ $CONVERT_INNODB -eq 1  ]; then
                         sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$DATABASE/$TABLE.sql
                     fi
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
+                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
                     SET foreign_key_checks = 0;
                     DROP TABLE IF EXISTS $TABLE;
                     SOURCE $DATABASE_DIR/$DATABASE/$TABLE.sql;
                     SET foreign_key_checks = 1;
-                    " 2>> $DATABASE_DIR/$DATABASE/restore_error.log
+                    " 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
+
+                    if [[ ! -z "$error" ]]; then
+                        log "Rise error: $error"
+                    fi
+
                 done
 
                 log "RESTORE: Import data into $DATABASE"
@@ -114,24 +119,27 @@ restore()
                         fi
 
                         error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                        SET SESSION net_buffer_length=1000000;
+                        set SESSION max_allowed_packet=1000000000;
                         SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                         SET foreign_key_checks = 0;
                         SET unique_checks = 0;
                         SET sql_log_bin = 0;
                         SET autocommit = 0;
                         START TRANSACTION;
-                        ${OPERATOR} '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+                        $OPERATOR '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                         COMMIT;
                         SET autocommit=1;
                         SET foreign_key_checks = 1;
                         SET unique_checks = 1;
                         SET sql_log_bin = 1;
                         " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
-                        
+
                         if [[ -z "$error" ]]; then
                             log "RESTORE: + $TABLE"
                         else
-                            log "RESTORE: - $TABLE ($error)"
+                            log "RESTORE: - $TABLE"
+                            log "RESTORE: Rise error: $error"
                         fi
 
                     fi
