@@ -87,10 +87,10 @@ restore()
             SET unique_checks = 1;
             SET sql_log_bin = 1;
             " 2>> $DATABASE_DIR/restore_error.log)
-            if [ $error -ne '' ]; then
-              log "RESTORE: - $TABLE ($error)"
+            if [[ -z "$error" ]]; then
+                log "RESTORE: + $TABLE"
             else
-              log "RESTORE: + $TABLE"
+                log "RESTORE: - $TABLE ($error)"
             fi
 
           fi

@@ -3,7 +3,7 @@
 # === CONFIG ===
 VERBOSE=0
 LOAD_DATA_LOCAL_INFILE=0
-CONVERT_INNODB="n"
+CONVERT_INNODB=0
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -81,7 +81,7 @@ restore()
                 log "RESTORE: Create tables in $DATABASE"
                 for TABLE in $tables; do
                     log "RESTORE: Create table: $DATABASE/$TABLE"
-                    if [ $CONVERT_INNODB == "y" ]; then
+                    if [ $CONVERT_INNODB -eq 1  ]; then
                         sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$DATABASE/$TABLE.sql
                     fi
                     mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
@@ -126,10 +126,10 @@ restore()
                         SET unique_checks = 1;
                         SET sql_log_bin = 1;
                         " 2>> $DATABASE_DIR/restore_error.log)
-                        if [ $error -ne '' ]; then
-                            log "RESTORE: - $TABLE ($error)"
-                        else
+                        if [[ -z "$error" ]]; then
                             log "RESTORE: + $TABLE"
+                        else
+                            log "RESTORE: - $TABLE ($error)"
                         fi
 
                     fi
@@ -239,7 +239,7 @@ do
         shift # past argument=value
     ;;
     --convert-innodb)
-         CONVERT_INNODB="yes"
+         CONVERT_INNODB=1
          shift # past argument=value
     ;;
     -l | --local)
@@ -264,9 +264,10 @@ if check_connection; then
     # === SETTINGS ===
     log "RESTORE: ============================================"
     log "RESTORE: Restore from: $DATABASE_DIR"
-    log "RESTORE: Load from local y/n: $LOAD_DATA_LOCAL_INFILE"
     log "RESTORE: Config file: $CONFIG_FILE"
-    log "RESTORE: Convert into InnoDB y/n: $CONVERT_INNODB"
+    log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
+    log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
+    log "RESTORE: Check database table y/n (default n): $DATABASES_TABLE_CHECK"
     log "RESTORE: Databse skip: $DATABASES_SKIP"
     log "RESTORE: Selected databases: $DATABASES_SELECTED"
     log "RESTORE: Verbose: $VERBOSE"
