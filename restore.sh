@@ -119,7 +119,8 @@ restore()
                         fi
 
                         error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
-                        SET GLOBAL connect_timeout = 30;
+                        SET GLOBAL interactive_timeout=60;
+                        SET GLOBAL connect_timeout = 60;
                         SET GLOBAL net_buffer_length=1000000;
                         SET GLOBAL max_allowed_packet=1000000000;
                         SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
