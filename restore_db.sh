@@ -83,7 +83,8 @@ restore()
                 local error=''
 
                 split -l $CONFIG_CHUNK -d "$DATABASE_DIR/$TABLE.txt" "$DATABASE_DIR/${TABLE}_part_"
-                for segment in "$DATABASE_DIR/${TABLE}"_part_*; do                
+                local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
+                for segment in "$DATABASE_DIR/${TABLE}"_part_*; do
 
                     error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
@@ -102,9 +103,9 @@ restore()
                     " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
 
                     if [[ -z "$error" ]]; then
-                        log "+ $segment"
+                        log "+ $segment / $segments"
                     else
-                        log "- $segment"
+                        log "- $segment / $segments"
                     fi
 
                     if [ -f "$segment" ]; then
@@ -203,6 +204,10 @@ do
     case $i in
     --config=*)
         CONFIG_FILE=( "${i#*=}" )
+        shift # past argument=value
+    ;;
+    --chunk=*)
+        CONFIG_CHUNK=( "${i#*=}" )
         shift # past argument=value
     ;;
     --convert-innodb)
