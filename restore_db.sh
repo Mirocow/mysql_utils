@@ -32,7 +32,7 @@ restore()
 
          if [ -f $DATABASE_DIR/__create.sql ]; then
              log "RESTORE: Create database $DATABASE if not exists"
-             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
+             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql > /dev/null
              mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
          fi
 
@@ -43,7 +43,7 @@ restore()
 
              log "RESTORE: Create table: $DATABASE/$TABLE"
              if [ $CONVERT_INNODB -eq 1 ]; then
-                 sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
+                 sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql > /dev/null
              fi
 
              error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
@@ -86,13 +86,13 @@ restore()
                 local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
                 for segment in "$DATABASE_DIR/${TABLE}"_part_*; do
 
-                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e \"
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                     SET foreign_key_checks = 0;
                     SET unique_checks = 0;
                     SET sql_log_bin = 0;
                     SET autocommit = 0;
-                    LOCK TABLES $TABLE WRITE;
+                    LOCK TABLES `$TABLE` WRITE;
                     $OPERATOR '$segment' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                     COMMIT;
                     UNLOCK TABLES;
@@ -100,7 +100,13 @@ restore()
                     SET foreign_key_checks = 1;
                     SET unique_checks = 1;
                     SET sql_log_bin = 1;
-                    " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+                    \" 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+
+                    while ! (ps -uax|grep "$segment")
+                    do
+                      log '.'
+                      sleep 3
+                    done
 
                     if [[ -z "$error" ]]; then
                         log "+ $segment / $segments"
