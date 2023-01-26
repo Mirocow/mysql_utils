@@ -141,11 +141,11 @@ restore()
                             SET sql_log_bin = 1;
                             \" 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
 
-                            while ! (ps -uax|grep "$segment")
-                            do
-                              log '.'
-                              sleep 3
-                            done
+                            #while ! (ps -uax|grep "$segment")
+                            #do
+                            #  log '.'
+                            #  sleep 3
+                            #done
 
                             if [[ -z "$error" ]]; then
                                 log "+ $segment / $segments"
