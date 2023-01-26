@@ -80,16 +80,12 @@ restore()
                 fi
 
                 error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
-                SET GLOBAL interactive_timeout=60;
-                SET GLOBAL connect_timeout = 60;
-                SET GLOBAL net_buffer_length=1000000;
-                SET GLOBAL max_allowed_packet=1000000000;
                 SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                 SET foreign_key_checks = 0;
                 SET unique_checks = 0;
                 SET sql_log_bin = 0;
                 SET autocommit = 0;
-                START TRANSACTION;
+                LOCK TABLES $TABLE WRITE;
                 $OPERATOR '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                 COMMIT;
                 UNLOCK TABLES;
