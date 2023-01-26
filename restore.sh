@@ -69,7 +69,7 @@ restore()
 
             if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
                 log "RESTORE: Create database $DATABASE if not exists"
-                sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/$DATABASE/__create.sql 1> /dev/null
+                sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/$DATABASE/__create.sql
                 mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
             fi
 
@@ -83,7 +83,7 @@ restore()
                 for TABLE in $tables; do
                     log "RESTORE: Create table: $DATABASE/$TABLE"
                     if [ $CONVERT_INNODB -eq 1  ]; then
-                        sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$DATABASE/$TABLE.sql 1> /dev/null
+                        sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$DATABASE/$TABLE.sql
                     fi
                     error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
                     SET foreign_key_checks = 0;

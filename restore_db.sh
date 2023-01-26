@@ -32,7 +32,7 @@ restore()
 
          if [ -f $DATABASE_DIR/__create.sql ]; then
              log "RESTORE: Create database $DATABASE if not exists"
-             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql > /dev/null
+             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
              mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
          fi
 
@@ -43,7 +43,7 @@ restore()
 
              log "RESTORE: Create table: $DATABASE/$TABLE"
              if [ $CONVERT_INNODB -eq 1 ]; then
-                 sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql > /dev/null
+                 sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
              fi
 
              error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
