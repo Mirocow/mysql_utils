@@ -102,7 +102,7 @@ restore()
                     " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
 
                     if [ -f "$segment" ]; then
-                        log "Delete segment $segment"
+                        log "RESTORE: Delete segment $segment"
                         rm "$segment"
                     fi
 
