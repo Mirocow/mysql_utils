@@ -122,7 +122,7 @@ restore()
                         local error=''
 
 						split -l $CONFIG_CHUNK -d "$DATABASE_DIR/$DATABASE/$TABLE.txt" "$DATABASE_DIR/$DATABASE/${TABLE}_part_"
-						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
+						for segment in "$DATABASE_DIR/$DATABASE/${TABLE}"_part_*; do
 
                             error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
