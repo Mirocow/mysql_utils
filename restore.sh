@@ -142,8 +142,13 @@ restore()
                             SET sql_log_bin = 1;
                             " 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
 
+                            if [[ -z "$error" ]]; then
+                                log "+ $segment"
+                            else
+                                log "- $segment"
+                            fi
+
                             if [ -f "$segment" ]; then
-                                log "Delete segment $segment"
                                 rm "$segment"
                             fi
 
