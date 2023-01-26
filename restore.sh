@@ -141,7 +141,7 @@ restore()
                             SET sql_log_bin = 1;
                             " 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
 
-                            while ! ($(ps -uax|grep "$segment"))
+                            while ! (ps -uax|grep "$segment" > /dev/null)
                             do
                               log '.'
                               sleep 3
