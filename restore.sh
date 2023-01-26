@@ -124,7 +124,7 @@ restore()
 						split -l $CONFIG_CHUNK -d "$DATABASE_DIR/$DATABASE/$TABLE.txt" "$DATABASE_DIR/$DATABASE/${TABLE}_part_"
 						for segment in "$DATABASE_DIR/$DATABASE/${TABLE}"_part_*; do
 
-                            log "RESTORE: Import from segment $segment"
+                            log "+ $segment"
 
                             error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
