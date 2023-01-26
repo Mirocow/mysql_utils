@@ -204,12 +204,13 @@ usage: $0 options
 This script restore databases.
 
 OPTIONS:
-   -e               Exclude databases
-   -s               Selected databases
-   --config         Path to configfile
-   --convert-innodb
-   --verbose
-   -h | --help      Usage
+    -e               Exclude databases
+    -s               Selected databases
+    --chunk=         Put NUMBER lines per output file
+    --config=        Path to configfile
+    --convert-innodb Convert database into InnoDb
+    --verbose
+    -h | --help      Usage
 
 Examples:
         restore.sh --verbose
@@ -251,6 +252,10 @@ do
     ;;
     --config=*)
         CONFIG_FILE=( "${i#*=}" )
+        shift # past argument=value
+    ;;
+    --chunk=*)
+        CONFIG_CHUNK=( "${i#*=}" )
         shift # past argument=value
     ;;
     --convert-innodb)

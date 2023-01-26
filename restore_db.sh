@@ -164,10 +164,11 @@ usage: $0 options
 This script restore databases.
 
 OPTIONS:
-         --config         Path to configfile
-         --convert-innodb
-         --verbose
-         -h | --help         Usage
+    --chunk=           Put NUMBER lines per output file
+    --config=          Path to configfil
+    --convert-innodb   Convert database into InnoDb
+    --verbose
+    -h | --help        Usage
 
 Examples:
         restore_db.sh --verbose
