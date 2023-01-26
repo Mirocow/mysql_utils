@@ -131,7 +131,7 @@ restore()
                             SET unique_checks = 0;
                             SET sql_log_bin = 0;
                             SET autocommit = 0;
-                            LOCK TABLES `$TABLE` WRITE;
+                            LOCK TABLES $TABLE WRITE;
                             $OPERATOR '$segment' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                             COMMIT;
                             UNLOCK TABLES;
@@ -143,8 +143,8 @@ restore()
 
                             while ! (ps -uax|grep "$segment")
                             do
-                            log '.'
-                            sleep 3
+                              log '.'
+                              sleep 3
                             done
 
                             if [[ -z "$error" ]]; then
