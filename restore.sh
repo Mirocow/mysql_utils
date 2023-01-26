@@ -4,6 +4,7 @@
 VERBOSE=0
 LOAD_DATA_LOCAL_INFILE=0
 CONVERT_INNODB=0
+CONFIG_CHUNK=100000
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -118,21 +119,33 @@ restore()
                             OPERATOR='LOAD DATA LOCAL INFILE'
                         fi
 
-                        error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
-                        SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
-                        SET foreign_key_checks = 0;
-                        SET unique_checks = 0;
-                        SET sql_log_bin = 0;
-                        SET autocommit = 0;
-                        LOCK TABLES $TABLE WRITE;
-                        $OPERATOR '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
-                        COMMIT;
-                        UNLOCK TABLES;
-                        SET autocommit=1;
-                        SET foreign_key_checks = 1;
-                        SET unique_checks = 1;
-                        SET sql_log_bin = 1;
-                        " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+                        local error=''
+
+						split -l $CONFIG_CHUNK -d "$DATABASE_DIR/$DATABASE/$TABLE.txt" "$DATABASE_DIR/$DATABASE/${TABLE}_part_"
+						for segment in "$DIR/$BDD/${TABLE}"_part_*; do
+
+                            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                            SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+                            SET foreign_key_checks = 0;
+                            SET unique_checks = 0;
+                            SET sql_log_bin = 0;
+                            SET autocommit = 0;
+                            LOCK TABLES $TABLE WRITE;
+                            $OPERATOR '$segment' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+                            COMMIT;
+                            UNLOCK TABLES;
+                            SET autocommit=1;
+                            SET foreign_key_checks = 1;
+                            SET unique_checks = 1;
+                            SET sql_log_bin = 1;
+                            " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+
+                            if [ -f "$segment" ]; then
+                                log "Delete segment $segment"
+                                rm "$segment"
+                            fi
+
+						done
 
                         if [[ -z "$error" ]]; then
                             log "RESTORE: + $TABLE"
