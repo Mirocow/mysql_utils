@@ -75,11 +75,11 @@ restore()
 
              if [ -s "$DATABASE_DIR/$TABLE.txt" ]; then
 
-                OPTIONS='--unbuffered --wait'
+                OPTIONS='--unbuffered --wait --reconnect --skip-column-names'
                 OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
                 if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
-                  OPERATOR='LOAD DATA LOCAL INFILE'
-                  OPTIONS='--unbuffered --local-infile --wait'
+                    OPERATOR='LOAD DATA LOW_PRIORITY LOCAL INFILE'
+                    OPTIONS='--unbuffered --local-infile --wait --reconnect --skip-column-names'
                 fi
 
                 local error=''
