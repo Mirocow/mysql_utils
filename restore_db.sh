@@ -96,8 +96,8 @@ restore()
                     SET autocommit = 0;
                     LOCK TABLES $TABLE WRITE;
                     $OPERATOR '$segment' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
-                    COMMIT;
                     UNLOCK TABLES;
+                    COMMIT;
                     SET autocommit=1;
                     SET foreign_key_checks = 1;
                     SET unique_checks = 1;
