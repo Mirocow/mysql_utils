@@ -88,14 +88,14 @@ restore()
                 local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
                 for segment in "$DATABASE_DIR/${TABLE}"_part_*; do
 
-                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS -e "
+                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                     SET foreign_key_checks = 0;
                     SET unique_checks = 0;
                     SET sql_log_bin = 0;
                     SET autocommit = 0;
-                    LOCK TABLES $TABLE WRITE;
-                    $OPERATOR '$segment' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+                    -- LOCK TABLES $TABLE WRITE;
+                    $OPERATOR '$segment' INTO TABLE $TABLE CHARACTER SET UTF8;
                     UNLOCK TABLES;
                     COMMIT;
                     SET autocommit=1;
