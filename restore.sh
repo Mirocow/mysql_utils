@@ -127,6 +127,8 @@ restore()
                         local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
 						for segment in "$DATABASE_DIR/$DATABASE/${TABLE}"_part_*; do
 
+                            wait_connection
+
                             error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
                             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                             SET SESSION wait_timeout=3600;

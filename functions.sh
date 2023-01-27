@@ -98,3 +98,15 @@ lockfile()
     mutex "${lockfile}" || { echo "Already running." >&2; exit 1; }
     trap "rm -rf ${lockfile}" QUIT INT TERM EXIT
 }
+
+wait_connection()
+{
+    i=1
+    sp="/-\|"
+    echo -n ' '
+    while ! (check_connection)
+    do
+        printf "\b${sp:i++%${#sp}:1}"
+        sleep 0.2
+    done
+}
