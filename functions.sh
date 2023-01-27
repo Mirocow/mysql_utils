@@ -23,7 +23,7 @@ log()
     # local reset=$(tput sgr0)
     # local toend=$(tput hpa $(tput cols))$(tput cub 6)
 
-    logger "$@"
+    logger -- "$@"
 
     if [ $VERBOSE -eq 1 ]; then
         echo "$@"
