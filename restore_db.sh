@@ -90,6 +90,7 @@ restore()
 
                     error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+                    SET SESSION wait_timeout=3600;
                     SET foreign_key_checks = 0;
                     SET unique_checks = 0;
                     SET sql_log_bin = 0;
