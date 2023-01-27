@@ -114,9 +114,11 @@ restore()
 
                     if [ -s "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
 
+                        OPTIONS='--unbuffered'
                         OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
-                        if [ $LOAD_DATA_LOCAL_INFILE -eq 1  ]; then
+                        if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
                             OPERATOR='LOAD DATA LOCAL INFILE'
+                            OPTIONS='--unbuffered --local-infile'
                         fi
 
                         local error=''
@@ -125,7 +127,7 @@ restore()
                         local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
 						for segment in "$DATABASE_DIR/$DATABASE/${TABLE}"_part_*; do
 
-                            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --unbuffered --local-infile -e "
+                            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS -e "
                             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                             SET foreign_key_checks = 0;
                             SET unique_checks = 0;
