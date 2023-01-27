@@ -86,7 +86,7 @@ restore()
                 local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
                 for segment in "$DATABASE_DIR/${TABLE}"_part_*; do
 
-                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --unbuffered -e "
+                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --unbuffered --local-infile -e "
                     SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                     SET foreign_key_checks = 0;
                     SET unique_checks = 0;
