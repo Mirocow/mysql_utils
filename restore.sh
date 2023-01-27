@@ -125,7 +125,7 @@ restore()
                         local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
 						for segment in "$DATABASE_DIR/$DATABASE/${TABLE}"_part_*; do
 
-                            error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
+                            error=$(mysql --wait --defaults-file=$CONFIG_FILE $DATABASE --local-infile -e "
                             SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                             SET foreign_key_checks = 0;
                             SET unique_checks = 0;
@@ -140,12 +140,6 @@ restore()
                             SET unique_checks = 1;
                             SET sql_log_bin = 1;
                             " 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
-
-                            while ! (ps -uax|grep "$segment" > /dev/null)
-                            do
-                              log '.'
-                              sleep 3
-                            done
 
                             if [[ -z "$error" ]]; then
                                 log "+ $segment / $segments"
