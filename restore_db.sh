@@ -102,7 +102,7 @@ restore()
                     SET foreign_key_checks = 1;
                     SET unique_checks = 1;
                     SET sql_log_bin = 1;
-                    " 2>&1 | tee -a $DATABASE_DIR/restore_error.log)
+                    " 2>&1)
 
                     if [[ -z "$error" ]]; then
                         log "+ $segment / $segments"
