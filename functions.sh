@@ -101,12 +101,11 @@ lockfile()
 
 wait_connection()
 {
-    i=1
-    sp="/-\|"
-    echo -n ' '
-    while ! (check_connection)
-    do
-        printf "\b${sp:i++%${#sp}:1}"
+    sp='/-\|'
+    printf ' '
+    while ! (check_connection); do
+        printf '\b%.1s' "$sp"
+        sp=${sp#?}${sp%???}
         sleep 0.2
     done
 }
