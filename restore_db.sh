@@ -41,8 +41,6 @@ restore()
          log "RESTORE: Create tables in $DATABASE"
          for TABLE in $tables; do
 
-            wait_connection
-
             log "RESTORE: Create table: $DATABASE/$TABLE"
             if [ $CONVERT_INNODB -eq 1 ]; then
                 sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
