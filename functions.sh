@@ -2,15 +2,14 @@
 
 check_connection()
 {
-    log "Checking MySQL connection..."
     mysql --defaults-file=$CONFIG_FILE -e ";" 2>/dev/null
     dbstatus=`echo $?`
     if [ $dbstatus -ne 0 ]; then
-        log "Fail!"
-        exit 1
+        # 1 = false
+        return 1
     fi
 
-    log "Success!"
+    # 0 = true
     return 0
 }
 
@@ -43,28 +42,14 @@ prepaire_skip_expression()
     echo ${return}
 }
 
-check_connection()
-{
-    log "Checking MySQL connection..."
-    mysql --defaults-file=$CONFIG_FILE -e exit 2>/dev/null
-    dbstatus=`echo $?`
-    if [ $dbstatus -ne 0 ]; then
-        log "Fail!"
-        exit 1
-    fi
-
-    log "Success!"
-    return 0
-}
-
 database_exists()
 {
     query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
     RESULT=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -e "$query")
     if [ "$RESULT" == "$@" ]; then
-        echo YES
+        return 1
     else
-        echo NO
+        return 0
     fi
 }
 
@@ -76,6 +61,7 @@ contains ()
     do
         [[ "$param" = "$elem" ]] && return 0;
     done;
+
     return 1
 }
 

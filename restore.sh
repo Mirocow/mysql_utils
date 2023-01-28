@@ -73,7 +73,7 @@ restore()
                 mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
             fi
 
-            if [ $(database_exists $DATABASE) != "YES" ]; then
+            if [ ! $(database_exists $DATABASE) ]; then
                 log "RESTORE: Error: Database $DATABASE dose not exists";
             else
 
