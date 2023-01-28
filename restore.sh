@@ -81,16 +81,20 @@ restore()
 
                 log "RESTORE: Create tables in $DATABASE"
                 for TABLE in $tables; do
+
+                    wait_connection
+
                     log "RESTORE: Create table: $DATABASE/$TABLE"
                     if [ $CONVERT_INNODB -eq 1  ]; then
                         sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$DATABASE/$TABLE.sql
                     fi
+
                     error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
                     SET foreign_key_checks = 0;
                     DROP TABLE IF EXISTS $TABLE;
                     SOURCE $DATABASE_DIR/$DATABASE/$TABLE.sql;
                     SET foreign_key_checks = 1;
-                    " 2>&1 | tee -a $DATABASE_DIR/$DATABASE/restore_error.log)
+                    " 2>&1)
 
                     if [[ ! -z "$error" ]]; then
                         log "Rise error: $error"
