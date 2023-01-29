@@ -249,4 +249,6 @@ if check_connection; then
 
     # === AUTORUN ===
     restore $DATABASE_DIR
+else
+    loc "Failed to establish a connection to the database"
 fi
