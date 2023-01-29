@@ -10,6 +10,11 @@ FILEATTRIBUTES=640
 TIME_REMOVED_DUMP_FILES='1 week ago'
 DATABASE_DIR='/var/backups/mysql'
 CONFIG_FILE='/etc/mysql/debian.cnf'
+TABLES=''
+EXCLUDE_TABLES=''
+EXCLUDE_DATA_TABLES=''
+BIN_DEPS="mysql mysqldump $COMPRESS"
+DATABASE="$1"
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -196,12 +201,6 @@ if [ $# = 0 ]; then
     usage;
     exit;
 fi
-
-TABLES=''
-EXCLUDE_TABLES=''
-EXCLUDE_DATA_TABLES=''
-BIN_DEPS="mysql mysqldump $COMPRESS"
-DATABASE="$1"
 
 # === CHECKS ===
 for BIN in $BIN_DEPS; do

@@ -5,6 +5,7 @@ VERBOSE=0
 LOAD_DATA_LOCAL_INFILE=0
 CONVERT_INNODB=0
 CONFIG_CHUNK=100000
+BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -152,6 +153,7 @@ restore()
                                 log "+ $segment / $segments"
                             else
                                 log "- $segment / $segments"
+                                break
                             fi
 
                             if [ -f "$segment" ]; then
@@ -228,8 +230,6 @@ EOF
 
 # === CHECKS ===
 DATABASE_DIR=$(pwd)
-
-BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
 if [ -f '/etc/debian_version' ]; then
     CONFIG_FILE='/etc/mysql/debian.cnf'

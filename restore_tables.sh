@@ -37,15 +37,17 @@ restore()
             mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
         fi
 
-        tables=$(ls -1 $DATABASE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
+        IFS=' ' read -r -a TABLES <<< "$TABLES"
+
+        tables=${TABLES[@]}
 
         log "RESTORE: Create tables in $DATABASE"
         for TABLE in $tables; do
 
-            log "RESTORE: Create table: $DATABASE/$TABLE"
-            if [ $CONVERT_INNODB -eq 1 ]; then
-                sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
-            fi
+           log "RESTORE: Create table: $DATABASE/$TABLE"
+           if [ $CONVERT_INNODB -eq 1 ]; then
+               sed -i 's/ENGINE=MyISAM/ENGINE=InnoDB/' $DATABASE_DIR/$TABLE.sql
+           fi
 
             error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE -e "
                   SET foreign_key_checks = 0;
@@ -76,11 +78,11 @@ restore()
 
             if [ -s "$DATABASE_DIR/$TABLE.txt" ]; then
 
-                OPTIONS='--unbuffered --wait --reconnect --skip-column-names'
-                OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
-                if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
-                    OPERATOR='LOAD DATA LOW_PRIORITY LOCAL INFILE'
-                    OPTIONS='--unbuffered --local-infile --wait --reconnect --skip-column-names'
+               OPTIONS='--unbuffered --wait --reconnect --skip-column-names'
+               OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
+               if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
+                   OPERATOR='LOAD DATA LOW_PRIORITY LOCAL INFILE'
+                   OPTIONS='--unbuffered --local-infile --wait --reconnect --skip-column-names'
                 fi
 
                 local error=''
@@ -128,38 +130,17 @@ restore()
                     log "RESTORE: Rise error: $error"
                 fi
 
-            fi
+             fi
 
         done
 
-        if [ -f "$DATABASE_DIR/__routines.sql" ]; then
-            log "RESTORE: Import routines into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__routines.sql 2>> $DATABASE_DIR/restore_error.log
-        fi
-
-        if [ -f "$DATABASE_DIR/__views.sql" ]; then
-            log "RESTORE: Import views into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__views.sql 2>> $DATABASE_DIR/restore_error.log
-        fi
-
-        if [ -f "$DATABASE_DIR/__triggers.sql" ]; then
-            log "RESTORE: Import triggers into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__triggers.sql 2>> $DATABASE_DIR/restore_error.log
-        fi
-
-        if [ -f "$DATABASE_DIR/__events.sql" ]; then
-            log "RESTORE: Import events into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__events.sql 2>> $DATABASE_DIR/restore_error.log
-        fi
 
         log "RESTORE: Flush privileges;"
         mysql --defaults-file=$CONFIG_FILE -e "flush privileges;"
         log "RESTORE: ** END **"
 
     else
-
          log "RESTORE: Database not found"
-
     fi
 }
 
@@ -214,6 +195,10 @@ do
         CONFIG_CHUNK=( "${i#*=}" )
         shift # past argument=value
     ;;
+    --tables=*)
+        TABLES=( "${i#*=}" )
+        shift # past argument=value
+    ;;
     --convert-innodb)
          CONVERT_INNODB=1
          shift # past argument=value
@@ -240,6 +225,7 @@ if check_connection; then
     # === SETTINGS ===
     log "RESTORE: ============================================"
     log "RESTORE: Restore from: $DATABASE_DIR"
+    log "RESTORE: Restore only tables: $TABLES"
     log "RESTORE: Config file: $CONFIG_FILE"
     log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
     log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
