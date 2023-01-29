@@ -27,14 +27,12 @@ restore()
 
     if [ $DATABASE ]; then
 
-        :> $DATABASE_DIR/restore_error.log
-
         log "RESTORE: Found restore files $DATABASE_DIR"
 
         if [ -f $DATABASE_DIR/__create.sql ]; then
             log "RESTORE: Create database $DATABASE if not exists"
             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
-            mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql
         fi
 
         IFS=' ' read -r -a TABLES <<< "$TABLES"

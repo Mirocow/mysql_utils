@@ -47,8 +47,6 @@ restore()
 
         lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
-        :> $DATABASE_DIR/$DATABASE/restore_error.log
-
         if [ ${#DATABASES_SELECTED[@]} -ne 0 ]; then
             if ! contains $DATABASE "${DATABASES_SELECTED[@]}"; then
                 log "RESTORE: Skip database $DATABASE"
@@ -71,7 +69,7 @@ restore()
             if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
                 log "RESTORE: Create database $DATABASE if not exists"
                 sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/$DATABASE/__create.sql
-                mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/$DATABASE/__create.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
+                mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/$DATABASE/__create.sql
             fi
 
             if [ ! $(database_exists $DATABASE) ]; then
@@ -175,22 +173,21 @@ restore()
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__routines.sql" ]; then
                     log "RESTORE: Import routines into $DATABASE"
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__routines.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
-                fi
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__routines.sql
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__views.sql" ]; then
                     log "RESTORE: Import views into $DATABASE"
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__views.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__views.sql
                 fi
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__triggers.sql" ]; then
                     log "RESTORE: Import triggers into $DATABASE"
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__triggers.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__triggers.sql
                 fi
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__events.sql" ]; then
                     log "RESTORE: Import events into $DATABASE"
-                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__events.sql 2>> $DATABASE_DIR/$DATABASE/restore_error.log
+                    mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__events.sql
                 fi
 
             fi

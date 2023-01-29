@@ -27,14 +27,12 @@ restore()
 
     if [ $DATABASE ]; then
 
-        :> $DATABASE_DIR/restore_error.log
-
         log "RESTORE: Found restore files $DATABASE_DIR"
 
         if [ -f $DATABASE_DIR/__create.sql ]; then
             log "RESTORE: Create database $DATABASE if not exists"
             sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
-            mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql
         fi
 
         tables=$(ls -1 $DATABASE_DIR | grep --invert-match '^__' | grep .sql | awk -F. '{print $1}' | sort | uniq)
@@ -134,22 +132,22 @@ restore()
 
         if [ -f "$DATABASE_DIR/__routines.sql" ]; then
             log "RESTORE: Import routines into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__routines.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__routines.sql
         fi
 
         if [ -f "$DATABASE_DIR/__views.sql" ]; then
             log "RESTORE: Import views into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__views.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__views.sql
         fi
 
         if [ -f "$DATABASE_DIR/__triggers.sql" ]; then
             log "RESTORE: Import triggers into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__triggers.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__triggers.sql
         fi
 
         if [ -f "$DATABASE_DIR/__events.sql" ]; then
             log "RESTORE: Import events into $DATABASE"
-            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__events.sql 2>> $DATABASE_DIR/restore_error.log
+            mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/__events.sql
         fi
 
         log "RESTORE: Flush privileges;"
