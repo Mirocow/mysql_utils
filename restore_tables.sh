@@ -85,41 +85,22 @@ restore()
 
                 local error=''
 
-                split -l $CONFIG_CHUNK -d "$DATABASE_DIR/$TABLE.txt" "$DATABASE_DIR/${TABLE}_part_"
-                local segments=$(ls -1 "$DATABASE_DIR/${TABLE}"_part_*|wc -l)
-                for segment in "$DATABASE_DIR/${TABLE}"_part_*; do
-
-                    wait_connection
-
-                    error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
-                    SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
-                    SET SESSION wait_timeout=3600;
-                    SET foreign_key_checks = 0;
-                    SET unique_checks = 0;
-                    SET sql_log_bin = 0;
-                    SET autocommit = 0;
-                    LOCK TABLES $TABLE WRITE;
-                    $OPERATOR '$segment' INTO TABLE $TABLE CHARACTER SET UTF8;
-                    UNLOCK TABLES;
-                    COMMIT;
-                    SET autocommit=1;
-                    SET foreign_key_checks = 1;
-                    SET unique_checks = 1;
-                    SET sql_log_bin = 1;
-                    " 2>&1)
-
-                    if [[ -z "$error" ]]; then
-                        log "+ $segment / $segments"
-                    else
-                        log "- $segment / $segments"
-                        break
-                    fi
-
-                    if [ -f "$segment" ]; then
-                        rm "$segment"
-                    fi
-
-                done
+                error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
+                SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+                SET SESSION wait_timeout=3600;
+                SET foreign_key_checks = 0;
+                SET unique_checks = 0;
+                SET sql_log_bin = 0;
+                SET autocommit = 0;
+                LOCK TABLES $TABLE WRITE;
+                $OPERATOR '$DATABASE_DIR/$TABLE.txt' INTO TABLE $TABLE CHARACTER SET UTF8;
+                UNLOCK TABLES;
+                COMMIT;
+                SET autocommit=1;
+                SET foreign_key_checks = 1;
+                SET unique_checks = 1;
+                SET sql_log_bin = 1;
+                " 2>&1)
 
                 if [[ -z "$error" ]]; then
                     log "RESTORE: + $TABLE"

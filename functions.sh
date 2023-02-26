@@ -47,10 +47,12 @@ database_exists()
     query="SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = '$@'"
     RESULT=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -e "$query")
     if [ "$RESULT" == "$@" ]; then
-        return 1
-    else
+        # 0 = true
         return 0
     fi
+
+    # 1 = false
+    return 1
 }
 
 contains ()

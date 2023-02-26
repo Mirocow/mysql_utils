@@ -49,24 +49,24 @@ backup()
 
     query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
     for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-        mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName | sed -e 's/DEFINER=[^*]*\*/\*/' >> $DATABASE_DIR/$DATABASE/__views.sql
+        mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 $DATABASE $viewName | sed -e 's/DEFINER=[^*]*\*/\*/' >> $DATABASE_DIR/$DATABASE/__views.sql
         array_views+=($viewName)
     done
     if [ -f $DATABASE_DIR/$DATABASE/__views.sql ]; then
         log "BACKUP:  > Exports views"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__routines.sql
+    mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__routines.sql
     if [ -f $DATABASE_DIR/$DATABASE/__routines.sql ]; then
         log "BACKUP:  > Exporting Routines"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__triggers.sql
+    mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__triggers.sql
     if [ -f $DATABASE_DIR/$DATABASE/__triggers.sql ]; then
         log "BACKUP:  > Exporting Triggers"
     fi
 
-    mysqldump --defaults-file=$CONFIG_FILE --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__events.sql
+    mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__events.sql
     if [ -f $DATABASE_DIR/$DATABASE/__events.sql ]; then
         log "BACKUP:  > Exporting Events"
     fi
@@ -105,15 +105,15 @@ backup()
 
         if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
             log "BACKUP: Exclude data from table $TABLE"
-            mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE
+            mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --no-data --add-drop-table --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE
         else
             # If fields has geospatial types
             checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
             hasGeo=$(eval $checkGeo)
             if [ ! -z "$hasGeo" ]; then
-                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$DATABASE_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE
+                mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --result-file=$DATABASE_DIR/$DATABASE/$TABLE.sql $DATABASE $TABLE
             else
-                mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE
+                mysqldump --defaults-file=$CONFIG_FILE --column-statistics=0 --flush-logs --default-character-set=utf8 --add-drop-table --quick --skip-events --skip-routines --skip-triggers --tab=$DATABASE_DIR/$DATABASE/ $DATABASE $TABLE
             fi
         fi
 
@@ -182,16 +182,16 @@ Options:
    -h  | --help                         This text
 
 Examples:
-        backup.sh --verbose --compress=
-        backup.sh --verbose --compress=gzip
-        backup.sh --verbose --compress=bzip2
-        backup.sh --verbose --compress=
-        backup.sh --verbose --compress= --lifetime="3 day ago"
-        backup.sh --verbose --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
-        backup.sh --verbose --dir="/home/backups/mysql" --tables="tbl_template tbl_template1 tbl_template2"
+        backup_db.sh [database-name] --verbose --compress=
+        backup_db.sh [database-name] --verbose --compress=gzip
+        backup_db.sh [database-name] --verbose --compress=bzip2
+        backup_db.sh [database-name] --verbose --compress=
+        backup_db.sh [database-name] --verbose --compress= --lifetime="3 day ago"
+        backup_db.sh [database-name] --verbose --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
+        backup_db.sh [database-name] --verbose --dir="/var/backups/mysql" --config="/etc/mysql/debian.cnf" --lifetime="1 day ago"
+        backup_db.sh [database-name] --verbose --dir="/home/backups/mysql" --lifetime="1 day ago"
+        backup_db.sh [database-name] --verbose --dir="/home/backups/mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
+        backup_db.sh [database-name] --verbose --dir="/home/backups/mysql" --tables="tbl_template tbl_template1 tbl_template2"
 
 EOF
 }
@@ -283,6 +283,11 @@ if check_connection; then
     log "BACKUP: Life time: $TIME_REMOVED_DUMP_FILES"
     log "BACKUP: ============================================"
     log "BACKUP: "
+
+    if ! database_exists "$DATABASE"; then
+       log "BACKUP: Unknown database '$DATABASE'"
+       exit
+    fi
 
     lockfile "$DATABASE_DIR/$DATABASE/lockfile.lock"
 
