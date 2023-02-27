@@ -86,6 +86,8 @@ restore()
                 local error=''
 
                 error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
+                SET GLOBAL net_buffer_length=1000000; --Set network buffer length to a large byte number
+                SET GLOBAL max_allowed_packet=1000000000; --Set maximum allowed packet size to a large byte number
                 SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
                 SET SESSION wait_timeout=3600;
                 SET foreign_key_checks = 0;
@@ -93,7 +95,7 @@ restore()
                 SET sql_log_bin = 0;
                 SET autocommit = 0;
                 LOCK TABLES $TABLE WRITE;
-                $OPERATOR '$DATABASE_DIR/$TABLE.txt' INTO TABLE $TABLE CHARACTER SET UTF8;
+                $OPERATOR '$DATABASE_DIR/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
                 UNLOCK TABLES;
                 COMMIT;
                 SET autocommit=1;
@@ -138,7 +140,7 @@ OPTIONS:
     -h | --help        Usage
 
 Examples:
-        restore_db.sh --verbose
+        restore_tables.sh --verbose
 
 
 

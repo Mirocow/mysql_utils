@@ -32,8 +32,6 @@ backup()
 {
     log "BACKUP: START "
 
-    query="SHOW databases;"
-
     local default_databases_exclude=(
         'information_schema'
         'performance_schema'
@@ -47,6 +45,7 @@ backup()
     log "BACKUP: Exclude databases: $database_exclude_expression"
 
     if [ ${#DATABASES[@]} -eq 0 ]; then
+        query="SHOW databases;"
         DATABASES=$(mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | egrep -v "$database_exclude_expression");
     fi
 
@@ -64,7 +63,7 @@ backup()
         chmod $DIRECTORYATTRIBUTES $DATABASE_DIR/$DATABASE
 
         query="SHOW CREATE DATABASE \`$DATABASE\`;"
-        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
         if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
             log "BACKUP: > Export create"
         fi
@@ -125,7 +124,7 @@ backup()
                 fi
             fi
 
-            sed -i 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
+            sed 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
 
             if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql

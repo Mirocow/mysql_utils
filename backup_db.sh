@@ -33,8 +33,6 @@ backup()
 {
     log "BACKUP: START "
 
-    query="SHOW databases;"
-
     local array_views=()
 
     mkdir -p $DATABASE_DIR/$DATABASE 2>/dev/null 1>&2
@@ -42,7 +40,7 @@ backup()
     chmod $DIRECTORYATTRIBUTES $DATABASE_DIR/$DATABASE
 
     query="SHOW CREATE DATABASE \`$DATABASE\`;"
-    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed -i 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
+    mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
     if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
         log "BACKUP:  > Export create"
     fi
@@ -117,7 +115,7 @@ backup()
             fi
         fi
 
-        sed -i 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
+        sed 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
 
         if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
             chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql
