@@ -63,7 +63,7 @@ backup()
         chmod $DIRECTORYATTRIBUTES $DATABASE_DIR/$DATABASE
 
         query="SHOW CREATE DATABASE \`$DATABASE\`;"
-        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
+        mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' | sed -En 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' > $DATABASE_DIR/$DATABASE/__create.sql
         if [ -f $DATABASE_DIR/$DATABASE/__create.sql ]; then
             log "BACKUP: > Export create"
         fi
@@ -75,25 +75,25 @@ backup()
         fi
 
         query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
-        for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-            mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars $DATABASE $viewName | sed -e 's/DEFINER=[^*]*\*/\*/' >> $DATABASE_DIR/$DATABASE/__views.sql
+        for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed -En 's/|//' | awk '{print $1}'); do
+            mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars $DATABASE $viewName | sed -En 's/DEFINER=[^*]*\*/\*/' >> $DATABASE_DIR/$DATABASE/__views.sql
             array_views+=($viewName)
         done
         if [ -f $DATABASE_DIR/$DATABASE/__views.sql ]; then
             log "BACKUP: > Exports views"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__routines.sql
+        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --routines --skip-events --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -En 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__routines.sql
         if [ -f $DATABASE_DIR/$DATABASE/__routines.sql ]; then
             log "BACKUP: > Exporting Routines"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__triggers.sql
+        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -En 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__triggers.sql
         if [ -f $DATABASE_DIR/$DATABASE/__triggers.sql ]; then
             log "BACKUP: > Exporting Triggers"
         fi
 
-        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -e 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__events.sql
+        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -En 's/DEFINER=[^*]*\*/\*/' > $DATABASE_DIR/$DATABASE/__events.sql
         if [ -f $DATABASE_DIR/$DATABASE/__events.sql ]; then
             log "BACKUP: > Exporting Events"
         fi
@@ -130,7 +130,7 @@ backup()
                 fi
             fi
 
-            sed 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
+            sed -En 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
 
             if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql
