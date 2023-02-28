@@ -307,5 +307,5 @@ if check_connection; then
     # === AUTORUN ===
     backup
 else
-    loc "Failed to establish a connection to the database"
+    log "Failed to establish a connection to the database"
 fi
