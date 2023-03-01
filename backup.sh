@@ -130,7 +130,7 @@ backup()
                 fi
             fi
 
-            sed -E 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
+            sed -i -E 's/AUTO_INCREMENT=[0-9]*\b//' $DATABASE_DIR/$DATABASE/$TABLE.sql
 
             if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql
