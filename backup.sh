@@ -135,7 +135,7 @@ backup()
             if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.sql" ]; then
                 chmod $FILEATTRIBUTES $DATABASE_DIR/$DATABASE/$TABLE.sql
                 chown $USER:$GROUP $DATABASE_DIR/$DATABASE/$TABLE.sql
-                log "BACKUP: ** set perm on $DATABASE/$TABLE.sql"
+                log "BACKUP: ** set permision to $DATABASE/$TABLE.sql"
             else
                 log "BACKUP: ** WARNING : $DATABASE_DIR/$DATABASE/$TABLE.sql not found"
             fi

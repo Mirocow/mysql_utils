@@ -82,13 +82,13 @@ nano /etc/cron.daily/db_backup
 ```
     # tail -f /var/log/syslog
         May 23 12:25:34 db1 logger: BACKUP:   ** Dump tecdoc.2013.ALI_COORD
-        May 23 12:25:35 db1 logger: BACKUP:   ** set perm on tecdoc.2013/AL
+        May 23 12:25:35 db1 logger: BACKUP:   ** set permision to tecdoc.2013/AL
         May 23 12:25:35 db1 logger: BACKUP:   ** bzip2 tecdoc.2013/ALI_COOR
         May 23 12:25:35 db1 logger: BACKUP:   ** Dump tecdoc.2013.ARTICLES
-        May 23 12:25:43 db1 logger: BACKUP:   ** set perm on tecdoc.2013/AR
+        May 23 12:25:43 db1 logger: BACKUP:   ** set permision to tecdoc.2013/AR
         May 23 12:25:43 db1 logger: BACKUP:   ** bzip2 tecdoc.2013/ARTICLES
         May 23 12:25:43 db1 logger: BACKUP:   ** Dump tecdoc.2013.ARTICLES_
-        May 23 12:25:43 db1 logger: BACKUP:   ** set perm on tecdoc.2013/AR
+        May 23 12:25:43 db1 logger: BACKUP:   ** set permision to tecdoc.2013/AR
         May 23 12:25:43 db1 logger: BACKUP:   ** bzip2 tecdoc.2013/ARTICLES
         May 23 12:25:43 db1 logger: BACKUP:   ** Dump tecdoc.2013.ARTICLE_C
 ```
