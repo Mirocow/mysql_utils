@@ -130,3 +130,11 @@ Examples:
         backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --lifetime="1 day ago"
         backup.sh --verbose --dir="/home/backups/mysql" --exclude="mysql" --exclude-tables="tbl_template" --lifetime="1 day ago"
 ```
+
+#### Errors
+
+* The MySQL server is running with the --secure-file-priv option so it cannot execute this statement when executing 'SELECT INTO OUTFILE
+```
+[mysqld]
+secure-file-priv = ""
+```

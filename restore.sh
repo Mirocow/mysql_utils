@@ -15,6 +15,62 @@ if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 # === FUNCTIONS ===
 source $(dirname "$0")/functions.sh
 
+restore_table()
+{
+    local TABLE=$1
+
+    log "RESTORE: Import data into $DATABASE/$TABLE"
+
+    if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
+        log "RESTORE: < $TABLE"
+        if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
+            log "RESTORE: Delete source: $TABLE.txt"
+            rm $DATABASE_DIR/$DATABASE/$TABLE.txt
+        fi
+        bunzip2 -k $DATABASE_DIR/$DATABASE/$TABLE.txt.bz2
+    fi
+
+    if [ -s "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
+
+        OPTIONS='--unbuffered --wait --reconnect --skip-column-names'
+        OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
+        if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
+            OPERATOR='LOAD DATA LOW_PRIORITY LOCAL INFILE'
+            OPTIONS='--unbuffered --local-infile --wait --reconnect --skip-column-names'
+        fi
+
+        local error=''
+
+        error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
+        SET GLOBAL net_buffer_length=1000000; -- Set network buffer length to a large byte number
+        SET GLOBAL max_allowed_packet=1000000000; -- Set maximum allowed packet size to a large byte number
+        SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
+        SET SESSION wait_timeout=3600;
+        SET foreign_key_checks = 0;
+        SET unique_checks = 0;
+        SET sql_log_bin = 0;
+        SET autocommit = 0;
+        LOCK TABLES $TABLE WRITE;
+        $OPERATOR '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
+        UNLOCK TABLES;
+        COMMIT;
+        SET autocommit=1;
+        SET foreign_key_checks = 1;
+        SET unique_checks = 1;
+        SET sql_log_bin = 1;
+        " 2>&1)
+
+        if [[ -z "$error" ]]; then
+            log "RESTORE: + $TABLE"
+        else
+            log "RESTORE: - $TABLE"
+            log "RESTORE: Rise error: $error"
+        fi
+
+    fi
+
+}
+
 restore()
 {
     DATABASE_DIR=$@
@@ -25,11 +81,11 @@ restore()
 
     log "RESTORE: Check runtime"
     for BIN in $BIN_DEPS; do
-            which $BIN 1>/dev/null 2>&1
-            if [ $? -ne 0 ]; then
-                    log "RESTORE: Error: Required file could not be found: $BIN"
-                    exit 1
-            fi
+        which $BIN 1>/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+            log "RESTORE: Error: Required file could not be found: $BIN"
+            exit 1
+        fi
     done
 
     log "RESTORE: Check restore folder"
@@ -101,62 +157,13 @@ restore()
 
                 log "RESTORE: Import data into $DATABASE"
                 for TABLE in $tables; do
-
-                    log "RESTORE: Import data into $DATABASE/$TABLE"
-
-                    if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt.bz2" ]; then
-                        log "RESTORE: < $TABLE"
-                        if [ -f "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
-                            log "RESTORE: Delete source: $TABLE.txt"
-                            rm $DATABASE_DIR/$DATABASE/$TABLE.txt
-                        fi
-                        bunzip2 -k $DATABASE_DIR/$DATABASE/$TABLE.txt.bz2
-                    fi
-
-                    if [ -s "$DATABASE_DIR/$DATABASE/$TABLE.txt" ]; then
-
-                        OPTIONS='--unbuffered --wait --reconnect --skip-column-names'
-                        OPERATOR='LOAD DATA LOW_PRIORITY INFILE'
-                        if [ $LOAD_DATA_LOCAL_INFILE -eq 1 ]; then
-                            OPERATOR='LOAD DATA LOW_PRIORITY LOCAL INFILE'
-                            OPTIONS='--unbuffered --local-infile --wait --reconnect --skip-column-names'
-                        fi
-
-                        local error=''
-
-                        error=$(mysql --defaults-file=$CONFIG_FILE $DATABASE $OPTIONS --execute="
-                        SET GLOBAL net_buffer_length=1000000; -- Set network buffer length to a large byte number
-                        SET GLOBAL max_allowed_packet=1000000000; -- Set maximum allowed packet size to a large byte number
-                        SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO';
-                        SET SESSION wait_timeout=3600;
-                        SET foreign_key_checks = 0;
-                        SET unique_checks = 0;
-                        SET sql_log_bin = 0;
-                        SET autocommit = 0;
-                        LOCK TABLES $TABLE WRITE;
-                        $OPERATOR '$DATABASE_DIR/$DATABASE/$TABLE.txt' IGNORE INTO TABLE $TABLE CHARACTER SET UTF8;
-                        UNLOCK TABLES;
-                        COMMIT;
-                        SET autocommit=1;
-                        SET foreign_key_checks = 1;
-                        SET unique_checks = 1;
-                        SET sql_log_bin = 1;
-                        " 2>&1)
-
-                        if [[ -z "$error" ]]; then
-                            log "RESTORE: + $TABLE"
-                        else
-                            log "RESTORE: - $TABLE"
-                            log "RESTORE: Rise error: $error"
-                        fi
-
-                    fi
-
+                    restore_table "$TABLE"
                 done
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__routines.sql" ]; then
                     log "RESTORE: Import routines into $DATABASE"
                     mysql --defaults-file=$CONFIG_FILE $DATABASE < $DATABASE_DIR/$DATABASE/__routines.sql
+                fi
 
                 if [ -f "$DATABASE_DIR/$DATABASE/__views.sql" ]; then
                     log "RESTORE: Import views into $DATABASE"
