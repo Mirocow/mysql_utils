@@ -97,7 +97,7 @@ restore()
 
         if [ -f $DATABASE_DIR/__create.sql ]; then
             log "RESTORE: Create database $DATABASE if not exists"
-            if [ $RESTORE_INTO -ne '' ]; then
+            if [ ! -z "$RESTORE_INTO" ]; then
                 sed -i -E "s/`$DATABASE`/`$RESTORE_INTO`/" $DATABASE_DIR/__create.sql
                 DATABASE="$RESTORE_INTO"
             fi
