@@ -96,11 +96,11 @@ restore()
         log "RESTORE: Found restore files $DATABASE_DIR"
 
         if [ -f $DATABASE_DIR/__create.sql ]; then
-            log "RESTORE: Create database $DATABASE if not exists"
             if [ ! -z "$RESTORE_INTO" ]; then
-                sed -i -E "s/`$DATABASE`/`$RESTORE_INTO`/" $DATABASE_DIR/__create.sql
+                sed -i -E "'s/`$DATABASE`/`$RESTORE_INTO`/'" $DATABASE_DIR/__create.sql
                 DATABASE="$RESTORE_INTO"
             fi
+            log "RESTORE: Create database $DATABASE if not exists"
             sed -i -E 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
             mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql
         fi
