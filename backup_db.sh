@@ -258,7 +258,7 @@ done
 
 for i in "$@"
 do
-    case $i in	
+    case $i in
         -t=* | --tables=*)
             TABLES=( "${i#*=}" )
             shift # past argument=value

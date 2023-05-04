@@ -6,6 +6,7 @@ LOAD_DATA_LOCAL_INFILE=0
 CONVERT_INNODB=0
 CONFIG_CHUNK=100000
 BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
+RESTORE_INTO=''
 
 # === DO NOT EDIT BELOW THIS LINE ===
 
@@ -96,6 +97,10 @@ restore()
 
         if [ -f $DATABASE_DIR/__create.sql ]; then
             log "RESTORE: Create database $DATABASE if not exists"
+            if [ $RESTORE_INTO -ne '' ]; then
+                sed -i -E "s/`$DATABASE`/`$RESTORE_INTO`/" $DATABASE_DIR/__create.sql
+                DATABASE="$RESTORE_INTO"
+            fi
             sed -i -E 's/^CREATE DATABASE `/CREATE DATABASE IF NOT EXISTS `/' $DATABASE_DIR/__create.sql
             mysql --defaults-file=$CONFIG_FILE < $DATABASE_DIR/__create.sql
         fi
@@ -169,7 +174,8 @@ This script restore databases.
 OPTIONS:
     --chunk=           Put NUMBER lines per output file
     --config=          Path to configfil
-    --convert-innodb   Convert database into InnoDb
+    --convert-innodb=1 Convert database into InnoDb
+    --restore_into=    Special name for create database with new name
     --verbose
     -h | --help        Usage
 
@@ -214,6 +220,10 @@ do
          CONVERT_INNODB=1
          shift # past argument=value
     ;;
+    --restore_into=*)
+        RESTORE_INTO=( "${i#*=}" )
+        shift # past argument=value
+    ;;
     -l | --local)
          LOAD_DATA_LOCAL_INFILE=1
          shift # past argument=value
@@ -236,6 +246,7 @@ if check_connection; then
     # === SETTINGS ===
     log "RESTORE: ============================================"
     log "RESTORE: Restore from: $DATABASE_DIR"
+    log "RESTORE: Restore into database: $RESTORE_INTO"
     log "RESTORE: Config file: $CONFIG_FILE"
     log "RESTORE: Load from local y/n (default n): $LOAD_DATA_LOCAL_INFILE"
     log "RESTORE: Convert into InnoDB y/n (default n): $CONVERT_INNODB"
