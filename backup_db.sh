@@ -29,8 +29,8 @@ f_log()
     local red=$(tput setf 4)
     local green=$(tput setf 2)
     local reset=$(tput sgr0)
-    local toend=$(tput hpa $(tput cols))$(tput cub 6)	
-    
+    local toend=$(tput hpa $(tput cols))$(tput cub 6)
+
     logger "BACKUP: $@"
 
     if [ $VERBOSE -eq 1 ]; then
@@ -56,16 +56,16 @@ backup()
     f_log " START "
 
     query="SHOW databases;"
-    
+
     #
     # Inlude tables
     #
 
     local default_databases_include=(
     )
-    
+
 	local default_tables_include=(
-	)    
+	)
 
     #
     # Exclude tables
@@ -76,7 +76,7 @@ backup()
 	'performance_schema'
     )
 
-    local array_views=()	
+    local array_views=()
 
 	mkdir -p $DST/$DATABASE 2>/dev/null 1>&2
 	chown $USER:$GROUP $DST/$DATABASE
@@ -93,7 +93,7 @@ backup()
 	for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
 		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName >> $DST/$DATABASE/__views.sql 2>> $DST/$DATABASE/error.log
 		array_views+=($viewName)
-	done		
+	done
 	if [ -f $DST/$DATABASE/__views.sql ]; then
 		f_log "  > Exports views"
 	fi
@@ -111,7 +111,7 @@ backup()
 
 	tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
 	tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
-	f_log "Exclude tables: $tables_exclude_expression"		
+	f_log "Exclude tables: $tables_exclude_expression"
 
 	data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
 	data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
@@ -120,41 +120,41 @@ backup()
 	tables=( ${TABLES[@]} )
 	tables_expression=$(prepaire_skip_expression "${tables[@]}")
 	f_log "Only tables: $tables_expression"
-	
+
     #
-    # Get list`s tables 
-    #	
-	
+    # Get list`s tables
+    #
+
 	query="SHOW TABLES;"
 	command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
-	
+
 	if [ $tables_exclude_expression ]; then
 		command=" $command | egrep -v \"$tables_exclude_expression\""
-	fi	
+	fi
 
 	if [ $tables_expression ]; then
 		command=" $command | egrep \"$tables_expression\""
 	fi
-	
+
 	f_log "Command: $command"
-	
+
 	for TABLE in $(eval $command); do
-	
+
 		f_log " ** Dump $DATABASE.$TABLE"
 
 		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
 			f_log "Exclude data from table $TABLE"
 			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
-			# If fields has geospatial types			
-			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""			
+			# If fields has geospatial types
+			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
 			hasGeo=$(eval $checkGeo)
 			if [ ! -z "$hasGeo" ]; then
 				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			else
 				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			fi
-		fi            
+		fi
 
 		if [ -f "$DST/$DATABASE/$TABLE.sql" ]; then
 			chmod $FILEATTRIBUTES $DST/$DATABASE/$TABLE.sql
@@ -171,21 +171,21 @@ backup()
 				f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
 
 				if [ $COMPRESS == 'bzip2' ]; then
-				
+
 					if [ -f "$DST/$DATABASE/$TABLE.txt.bz2" ]; then
 						rm $DST/$DATABASE/$TABLE.txt.bz2
-					fi					
-				
+					fi
+
 					($COMPRESS $DST/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$DATABASE/$TABLE.txt.bz2 && chown $USER:$GROUP $DST/$DATABASE/$TABLE.txt.bz2) &
-					
+
 				elif [ $COMPRESS == 'gzip' ]; then
-				
+
 					if [ -f "$DST/$DATABASE/$TABLE.txt.gz" ]; then
 						rm $DST/$DATABASE/$TABLE.txt.gz
-					fi					
-				
+					fi
+
 					($COMPRESS $DST/$DATABASE/$TABLE.txt && chmod $FILEATTRIBUTES $DST/$DATABASE/$TABLE.txt.gz && chown $USER:$GROUP $DST/$DATABASE/$TABLE.txt.gz) &
-					
+
 				fi
 
 			fi
@@ -202,9 +202,9 @@ backup()
 usage()
 {
     cat << EOF
-    
+
         This mysql backup engine.
-    
+
         Usage:  $0 <[database-name]> <[options]> or bash $0 <[database-name]> <[options]>
 
 Options:
@@ -262,7 +262,7 @@ do
         -t=* | --tables=*)
             TABLES=( "${i#*=}" )
             shift # past argument=value
-        ;;	
+        ;;
         --exclude-tables=*)
             EXCLUDE_TABLES=( "${i#*=}" )
             shift # past argument=value
@@ -278,7 +278,7 @@ do
         --include-data-tables=*)
             INCLUDE_DATA_TABLES=( "${i#*=}" )
             shift # past argument=value
-        ;;        		
+        ;;
         -c=* | --compress=*)
             COMPRESS=( "${i#*=}" )
             shift # past argument=value
@@ -317,7 +317,7 @@ DSTOLD=$BACKUP_DIR/$DATEOLD
 if [ ! -d "$DST" ]; then
     mkdir -p $DST;
     chmod $DIRECTORYATTRIBUTES $DST;
-    chown $USER:$GROUP $DST;    
+    chown $USER:$GROUP $DST;
 fi
 
 if [ -d "$DSTOLD" ]; then
