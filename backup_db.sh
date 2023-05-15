@@ -38,7 +38,7 @@ prepaire_skip_expression()
 
 backup()
 {
-    f_log " START "
+    log " START "
 
     query="SHOW databases;"
 
@@ -71,7 +71,7 @@ backup()
 	query="SHOW CREATE DATABASE \`$DATABASE\`;"
 	mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$DATABASE/__create.sql
 	if [ -f $DST/$DATABASE/__create.sql ]; then
-		f_log "  > Export create"
+		log "  > Export create"
 	fi
 
 	query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
@@ -80,12 +80,12 @@ backup()
 		array_views+=($viewName)
 	done
 	if [ -f $DST/$DATABASE/__views.sql ]; then
-		f_log "  > Exports views"
+		log "  > Exports views"
 	fi
 
 	mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DST/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$DATABASE/__routines.sql
 	if [ -f $DST/$DATABASE/__routines.sql ]; then
-		f_log "  > Exports Routines"
+		log "  > Exports Routines"
 	fi
 
 
@@ -96,15 +96,15 @@ backup()
 
 	tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
 	tables_exclude_expression=$(prepaire_skip_expression "${tables_exclude[@]}")
-	f_log "Exclude tables: $tables_exclude_expression"
+	log "Exclude tables: $tables_exclude_expression"
 
 	data_tables_exclude=( ${EXCLUDE_DATA_TABLES[@]} )
 	data_tables_exclude_expression=$(prepaire_skip_expression "${data_tables_exclude[@]}")
-	f_log "Exclude data tables: $data_tables_exclude_expression"
+	log "Exclude data tables: $data_tables_exclude_expression"
 
 	tables=( ${TABLES[@]} )
 	tables_expression=$(prepaire_skip_expression "${tables[@]}")
-	f_log "Only tables: $tables_expression"
+	log "Only tables: $tables_expression"
 
     #
     # Get list`s tables
@@ -121,14 +121,14 @@ backup()
 		command=" $command | egrep \"$tables_expression\""
 	fi
 
-	f_log "Command: $command"
+	log "Command: $command"
 
 	for TABLE in $(eval $command); do
 
-		f_log " ** Dump $DATABASE.$TABLE"
+		log " ** Dump $DATABASE.$TABLE"
 
 		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
-			f_log "Exclude data from table $TABLE"
+			log "Exclude data from table $TABLE"
 			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
 			# If fields has geospatial types
@@ -144,16 +144,16 @@ backup()
 		if [ -f "$DST/$DATABASE/$TABLE.sql" ]; then
 			chmod $FILEATTRIBUTES $DST/$DATABASE/$TABLE.sql
 			chown $USER:$GROUP $DST/$DATABASE/$TABLE.sql
-			f_log "  ** set perm on $DATABASE/$TABLE.sql"
+			log "  ** set perm on $DATABASE/$TABLE.sql"
 		else
-			f_log "  ** WARNING : $DST/$DATABASE/$TABLE.sql not found"
+			log "  ** WARNING : $DST/$DATABASE/$TABLE.sql not found"
 		fi
 
 		if [ -f "$DST/$DATABASE/$TABLE.txt" ]; then
 
 			if [ $COMPRESS ]; then
 
-				f_log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
+				log "  ** $COMPRESS $DATABASE/$TABLE.txt in background"
 
 				if [ $COMPRESS == 'bzip2' ]; then
 
@@ -176,12 +176,12 @@ backup()
 			fi
 
 		else
-			f_log "  ** WARNING : $DST/$DATABASE/$TABLE.txt not found"
+			log "  ** WARNING : $DST/$DATABASE/$TABLE.txt not found"
 		fi
 
 	done
 
-    f_log " END "
+    log " END "
 }
 
 usage()
@@ -310,17 +310,17 @@ if [ -d "$DSTOLD" ]; then
 fi
 
 # === SETTINGS ===
-f_log "============================================"
-f_log "Dump into: $DST"
-f_log "Config file: $CONFIG_FILE"
-f_log "Verbose: $VERBOSE"
-f_log "Compress: $COMPRESS"
-f_log "Database: $DATABASE"
-f_log "Tables: $TABLES"
-f_log "Exclude tables: $EXCLUDE_TABLES"
-f_log "Life time: $TIME_REMOVED_DUMP_FILES"
-f_log "============================================"
-f_log ""
+log "============================================"
+log "Dump into: $DST"
+log "Config file: $CONFIG_FILE"
+log "Verbose: $VERBOSE"
+log "Compress: $COMPRESS"
+log "Database: $DATABASE"
+log "Tables: $TABLES"
+log "Exclude tables: $EXCLUDE_TABLES"
+log "Life time: $TIME_REMOVED_DUMP_FILES"
+log "============================================"
+log ""
 
 # === AUTORUN ===
 backup
