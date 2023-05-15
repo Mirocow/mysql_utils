@@ -12,7 +12,6 @@ RESTORE_INTO=''
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
-
 # === FUNCTIONS ===
 source $(dirname "$0")/functions.sh
 
@@ -73,9 +72,9 @@ restore_table()
 	if [ $DATABASES_TABLE_CHECK ]; then
 		if [ -f "$DATABASE_DIR/$TABLE.ibd" ]; then
 			if [ ! $(innochecksum $DATABASE_DIR/$TABLE.ibd) ]; then
-				f_log "$TABLE [OK]"
+				log "$TABLE [OK]"
 			else
-				f_log "$TABLE [ERR]"
+				log "$TABLE [ERR]"
 			fi
 		fi
 	fi
@@ -259,5 +258,5 @@ if check_connection; then
     # === AUTORUN ===
     restore $DATABASE_DIR
 else
-    loc "Failed to establish a connection to the database"
+    log "Failed to establish a connection to the database"
 fi

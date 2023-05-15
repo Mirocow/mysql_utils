@@ -19,14 +19,14 @@ BIN_DEPS="mysql mysqldump $COMPRESS"
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
+# === FUNCTIONS ===
+source $(dirname "$0")/functions.sh
+
 if [ -f '/etc/debian_version' ]; then
     CONFIG_FILE='/etc/mysql/debian.cnf'
 else
     CONFIG_FILE='~/mysql_utils/etc/mysql/debian.cnf'
 fi
-
-# === FUNCTIONS ===
-source $(dirname "$0")/functions.sh
 
 backup()
 {

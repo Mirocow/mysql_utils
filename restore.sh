@@ -11,7 +11,6 @@ BIN_DEPS="ls grep awk sort uniq bunzip2 bzip2 mysql"
 
 if [ ! -n "$BASH" ] ;then echo Please run this script $0 with bash; exit 1; fi
 
-
 # === FUNCTIONS ===
 source $(dirname "$0")/functions.sh
 
