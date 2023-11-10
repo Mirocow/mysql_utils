@@ -38,30 +38,30 @@ prepaire_skip_expression()
 
 backup()
 {
-    log " START "
+        log " START "
 
-    query="SHOW databases;"
+        query="SHOW databases;"
 
-    #
-    # Inlude tables
-    #
+        #
+        # Inlude tables
+        #
 
-    local default_databases_include=(
-    )
+        local default_databases_include=(
+        )
 
 	local default_tables_include=(
 	)
 
-    #
-    # Exclude tables
-    #
+        #
+        # Exclude tables
+        #
 
-    local default_databases_exclude=(
-	'information_schema'
-	'performance_schema'
-    )
+        local default_databases_exclude=(
+            'information_schema'
+            'performance_schema'
+        )
 
-    local array_views=()
+        local array_views=()
 
 	mkdir -p $DST/$DATABASE 2>/dev/null 1>&2
 	chown $USER:$GROUP $DST/$DATABASE
@@ -71,27 +71,42 @@ backup()
 	query="SHOW CREATE DATABASE \`$DATABASE\`;"
 	mysql --defaults-file=$CONFIG_FILE --skip-column-names -B -e "$query" | awk -F"\t" '{ print $2 }' > $DST/$DATABASE/__create.sql
 	if [ -f $DST/$DATABASE/__create.sql ]; then
-		log "  > Export create"
+            log "  > Export create"
 	fi
+
+        local mysqlDumpVars="--single-transaction"
+
+        if mysqldump --column-statistics=0 --version &>/dev/null; then
+            mysqlDumpVars="$mysqlDumpVars --column-statistics=0"
+        fi
 
 	query="SHOW FULL TABLES WHERE Table_type = 'VIEW';"
 	for viewName in $(mysql --defaults-file=$CONFIG_FILE $DATABASE -N -e "$query" | sed 's/|//' | awk '{print $1}'); do
-		mysqldump --defaults-file=$CONFIG_FILE $DATABASE $viewName >> $DST/$DATABASE/__views.sql 2>> $DST/$DATABASE/error.log
-		array_views+=($viewName)
+            mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars $DATABASE $viewName >> $DST/$DATABASE/__views.sql 2>> $DST/$DATABASE/error.log
+            array_views+=($viewName)
 	done
 	if [ -f $DST/$DATABASE/__views.sql ]; then
-		log "  > Exports views"
+            log "  > Exports views"
 	fi
 
-	mysqldump --defaults-file=$CONFIG_FILE --routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DST/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$DATABASE/__routines.sql
+	mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE 2>> $DST/$DATABASE/error.log  | sed -e 's/DEFINER=[^*]*\*/\*/' > $DST/$DATABASE/__routines.sql
 	if [ -f $DST/$DATABASE/__routines.sql ]; then
-		log "  > Exports Routines"
+            log "  > Exports Routines"
 	fi
 
+        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --triggers --skip-events --skip-routines --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -E 's/DEFINER=[^*]*\*/\*/' > $DST/$DATABASE/__triggers.sql
+        if [ -f $DST/$DATABASE/__triggers.sql ]; then
+            log "  > Exporting Triggers"
+        fi
+
+        mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --events --skip-routines --skip-triggers --no-create-info --no-data --no-create-db --skip-opt $DATABASE | sed -E 's/DEFINER=[^*]*\*/\*/' > $DST/$DATABASE/__events.sql
+        if [ -f $DST/$DATABASE/__events.sql ]; then
+		log "  > Exporting Events"
+        fi
 
 	local default_tables_exclude=(
-	'slow_log'
-	'general_log'
+            'slow_log'
+            'general_log'
 	)
 
 	tables_exclude=( ${default_tables_exclude[@]} ${array_views[@]} ${EXCLUDE_TABLES[@]} )
@@ -106,9 +121,9 @@ backup()
 	tables_expression=$(prepaire_skip_expression "${tables[@]}")
 	log "Only tables: $tables_expression"
 
-    #
-    # Get list`s tables
-    #
+	#
+	# Get list`s tables
+	#
 
 	query="SHOW TABLES;"
 	command="mysql --defaults-file=$CONFIG_FILE --skip-column-names -B $DATABASE -e \"$query\""
@@ -129,17 +144,19 @@ backup()
 
 		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
 			log "Exclude data from table $TABLE"
-			mysqldump --defaults-file=$CONFIG_FILE --single-transaction --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+			mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
 			# If fields has geospatial types
 			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
 			hasGeo=$(eval $checkGeo)
 			if [ ! -z "$hasGeo" ]; then
-				mysqldump --defaults-file=$CONFIG_FILE --single-transaction --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+				mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			else
-				mysqldump --defaults-file=$CONFIG_FILE --single-transaction --flush-logs --default-character-set=utf8 --add-drop-table --quick --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+				mysqldump --defaults-file=$CONFIG_FILE $mysqlDumpVars --flush-logs --default-character-set=utf8 --add-drop-table --quick --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			fi
 		fi
+
+		sed -i -E 's/AUTO_INCREMENT=[0-9]*\b//' $DST/$DATABASE/$TABLE.sql
 
 		if [ -f "$DST/$DATABASE/$TABLE.sql" ]; then
 			chmod $FILEATTRIBUTES $DST/$DATABASE/$TABLE.sql
