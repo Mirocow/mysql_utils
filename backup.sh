@@ -68,7 +68,7 @@ backup()
             log "BACKUP: > Export create"
         fi
 
-        local mysqlDumpVars="--single-transaction=TRUE"
+        local mysqlDumpVars="--single-transaction"
 
         if mysqldump --column-statistics=0 --version &>/dev/null; then
             mysqlDumpVars="$mysqlDumpVars --column-statistics=0"
