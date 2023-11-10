@@ -129,15 +129,15 @@ backup()
 
 		if [ $(echo $data_tables_exclude_expression| grep $TABLE) ]; then
 			log "Exclude data from table $TABLE"
-			mysqldump --defaults-file=$CONFIG_FILE --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+			mysqldump --defaults-file=$CONFIG_FILE --single-transaction --no-data --add-drop-table --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 		else
 			# If fields has geospatial types
 			checkGeo="mysql --defaults-file=$CONFIG_FILE -B $DATABASE -e \"SHOW COLUMNS FROM $TABLE WHERE Type IN ('point', 'polygon', 'geometry', 'linestring')\""
 			hasGeo=$(eval $checkGeo)
 			if [ ! -z "$hasGeo" ]; then
-				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+				mysqldump --defaults-file=$CONFIG_FILE --single-transaction --flush-logs --default-character-set=utf8 --add-drop-table --quick --result-file=$DST/$DATABASE/$TABLE.sql $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			else
-				mysqldump --defaults-file=$CONFIG_FILE --flush-logs --default-character-set=utf8 --add-drop-table --quick --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
+				mysqldump --defaults-file=$CONFIG_FILE --single-transaction --flush-logs --default-character-set=utf8 --add-drop-table --quick --tab=$DST/$DATABASE/ $DATABASE $TABLE 2>> $DST/$DATABASE/error.log
 			fi
 		fi
 
