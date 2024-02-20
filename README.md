@@ -1,7 +1,5 @@
 ## mysql_utils for Debian or Other OS
 
-Russian documentation: http://docs.mirocow.com/doku.php?id=mysql:mysql_utils
-
 Backup and Restore data from MySql tables
 
 ### Install
